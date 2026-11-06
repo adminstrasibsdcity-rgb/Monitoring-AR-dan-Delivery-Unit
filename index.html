@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UnitTrack – Monitoring AR & Delivery Unit</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  color-scheme:light dark;
+  --bg:#f2f5fa;--card:#ffffff;--ink:#0f172a;--mute:#64748b;--line:#e2e8f0;--head:#0b1b3b;--head-ink:#ffffff;
+  --brand:#1d4ed8;--brand-soft:#dbeafe;--red:#dc2626;--red-soft:#fee2e2;--amber:#b45309;--amber-soft:#fef3c7;
+  --green:#15803d;--green-soft:#dcfce7;--gray-soft:#e8edf4;--input:#ffffff;--row-hover:#f8fafc;--shadow:0 1px 2px rgba(15,23,42,.06),0 4px 14px rgba(15,23,42,.05);
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0a1020;--card:#111a2e;--ink:#e6ebf5;--mute:#93a1ba;--line:#22304b;--head:#070d1b;--head-ink:#ffffff;
+    --brand:#60a5fa;--brand-soft:#16294d;--red:#f87171;--red-soft:#3a1717;--amber:#fbbf24;--amber-soft:#3a2d0c;
+    --green:#4ade80;--green-soft:#0f2e1b;--gray-soft:#1a2640;--input:#0d1526;--row-hover:#15213a;--shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0a1020;--card:#111a2e;--ink:#e6ebf5;--mute:#93a1ba;--line:#22304b;--head:#070d1b;--head-ink:#ffffff;
+  --brand:#60a5fa;--brand-soft:#16294d;--red:#f87171;--red-soft:#3a1717;--amber:#fbbf24;--amber-soft:#3a2d0c;
+  --green:#4ade80;--green-soft:#0f2e1b;--gray-soft:#1a2640;--input:#0d1526;--row-hover:#15213a;--shadow:none;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;min-height:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--head);z-index:50}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--head);color:var(--head-ink);border-bottom:3px solid var(--red)}
+.top-in{max-width:1400px;margin:0 auto;padding:10px 16px 0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:.2px}
+.brand i{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--brand);color:#fff;font-style:normal;font-size:16px}
+.brand small{display:block;font-weight:500;font-size:11px;opacity:.7;letter-spacing:0}
+.today{margin-left:auto;font-size:12px;opacity:.85;text-align:right}
+nav#nav{width:100%;display:flex;gap:2px;overflow-x:auto;padding-top:6px;scrollbar-width:none}
+nav#nav button{flex:none;background:none;border:0;color:#fff;opacity:.72;padding:9px 14px;font:600 13px system-ui,sans-serif;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-3px;white-space:nowrap}
+nav#nav button:hover{opacity:1}
+nav#nav button.on{opacity:1;border-bottom-color:#fff}
+nav#nav .cnt{display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;line-height:18px;text-align:center}
+main{max-width:1400px;margin:0 auto;padding:16px}
+h2{font-size:18px;margin:0 0 4px}
+h3{font-size:14px;margin:0 0 10px}
+.muted{color:var(--mute)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:14px 16px}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);border-left:4px solid var(--brand)}
+.kpi.red{border-left-color:var(--red)}.kpi.green{border-left-color:var(--green)}.kpi.amber{border-left-color:var(--amber)}.kpi.gray{border-left-color:var(--mute)}
+.kpi .l{font-size:12px;color:var(--mute);font-weight:600}
+.kpi .v{font-size:22px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12px;color:var(--mute)}
+.two{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.bar .sp{flex:1}
+input,select,textarea,button{font:inherit;color:inherit}
+input[type=text],input[type=search],input[type=date],input[type=time],input[type=number],select,textarea{background:var(--input);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--brand);outline-offset:-1px}
+.btn{background:var(--brand);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+.btn.red{background:var(--red);color:#fff}
+.btn.sm{padding:4px 10px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.tw{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card);max-height:calc(100vh - 250px);min-height:120px}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+th{position:sticky;top:0;background:var(--gray-soft);text-align:left;padding:8px 10px;font-size:12px;white-space:nowrap;border-bottom:1px solid var(--line);z-index:2}
+td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:hover td{background:var(--row-hover)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sub{font-size:11px;color:var(--mute)}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}
+.lnk{color:var(--brand);cursor:pointer;text-decoration:none}.lnk:hover{text-decoration:underline}
+.chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;background:var(--gray-soft);color:var(--ink)}
+.chip.ok{background:var(--green-soft);color:var(--green)}
+.chip.bad{background:var(--red-soft);color:var(--red)}
+.chip.warn{background:var(--amber-soft);color:var(--amber)}
+.chip.info{background:var(--brand-soft);color:var(--brand)}
+td select,td input[type=date],td input[type=text]{padding:4px 6px;font-size:12px;max-width:160px}
+.hbar{display:grid;grid-template-columns:130px 1fr auto;gap:8px;align-items:center;margin:6px 0;cursor:pointer}
+.hbar .t{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbar .b{height:14px;background:var(--gray-soft);border-radius:7px;overflow:hidden}
+.hbar .b i{display:block;height:100%;background:var(--brand);border-radius:7px}
+.hbar.r .b i{background:var(--red)}.hbar.a .b i{background:#d97706}.hbar.g .b i{background:var(--green)}
+.hbar .n{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.todo{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:7px;cursor:pointer;background:var(--card)}
+.todo:hover{border-color:var(--brand)}
+.todo b.n{min-width:30px;text-align:center;border-radius:8px;padding:2px 8px;background:var(--red-soft);color:var(--red)}
+.todo.zero b.n{background:var(--green-soft);color:var(--green)}
+.banner{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber);border-radius:10px;padding:9px 12px;margin-bottom:12px;font-size:13px}
+.strip{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;margin-bottom:8px}
+.strip b{font-variant-numeric:tabular-nums}
+.modal{position:fixed;inset:0;z-index:100;background:rgba(5,10,25,.55);display:flex;align-items:flex-start;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 20px) 12px 20px;overflow:auto}
+.modal[hidden]{display:none}
+.sheet{background:var(--card);border-radius:14px;width:min(880px,100%);box-shadow:0 20px 60px rgba(0,0,0,.4);border:1px solid var(--line)}
+.sheet-h{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.sheet-b{padding:14px 18px;max-height:calc(100vh - 220px);overflow:auto}
+.sheet-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--card);border-radius:0 0 14px 14px}
+.sec{margin:0 0 16px}
+.sec>h4{margin:0 0 8px;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--brand);border-bottom:1px solid var(--line);padding-bottom:4px}
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.fld{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute);font-weight:600}
+.fld input,.fld select,.fld textarea{font-weight:400;color:var(--ink);width:100%}
+.fld small{font-weight:400;font-size:11px}
+.chk{display:flex;align-items:center;gap:7px;font-size:13px;padding-top:18px}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px 14px;background:var(--gray-soft);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px}
+.info-grid span{display:block;color:var(--mute);font-size:11px}
+.info-grid b{font-size:13px}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+#toast div{background:#0f172a;color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.35);max-width:90vw}
+.slot{display:grid;grid-template-columns:90px 1fr;gap:0}
+.empty{padding:28px;text-align:center;color:var(--mute)}
+textarea.paste{width:100%;min-height:110px;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;white-space:pre}
+.steps{counter-reset:s;margin:0;padding:0;list-style:none}
+.steps li{counter-increment:s;position:relative;padding:8px 0 8px 38px;border-bottom:1px dashed var(--line)}
+.steps li::before{content:counter(s);position:absolute;left:0;top:7px;width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px}
+@media (max-width:640px){main{padding:10px}.kpi .v{font-size:19px}.tw{max-height:none}}
+
+.rolebtn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);color:#fff;padding:6px 14px;border-radius:999px;font-weight:700;cursor:pointer}
+.rolebtn:hover{background:rgba(255,255,255,.22)}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{border:1px solid var(--line);background:var(--card);padding:6px 12px;border-radius:999px;cursor:pointer;font-weight:600;font-size:13px}
+.pill b{margin-left:6px;opacity:.75}
+.pill.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.next{background:var(--brand-soft);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.6}
+.lock{opacity:.6}
+.tag{font-size:10px;padding:1px 7px;border-radius:6px;background:var(--gray-soft);color:var(--mute);margin-left:6px;font-weight:700;letter-spacing:0;text-transform:none}
+tr.clk{cursor:pointer}
+details.card summary{cursor:pointer;font-weight:700}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><i>🚗</i><div>UnitTrack<small>Monitoring AR &amp; Delivery Unit · Auto2000 BSD City</small></div></div>
+    <div class="today" id="today"></div><button class="rolebtn" id="role" data-act="login"></button>
+    <nav id="nav"></nav>
+  </div>
+</header>
+<main id="main"></main>
+<div class="modal" id="modal" hidden></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ================= DATA CONTOH (dari file Monitoring_Unit_BSDC) ================= */
+const SAMPLE = {ar:[],do:[],stock:[],man:{}};
+
+/* ================= KONSTANTA ================= */
+const SLOTS=['Slot 1','Slot 2','Slot 3','Slot 4','Cadangan','Serah Terima Cabang'];
+const SC='Serah Terima Cabang';
+const L_SYARAT=['Tanpa STNK','Tunggu STNK Jadi','Tunggu KIR Selesai'];
+const L_BAYAR=['Full DP','Full Payment','Belum Full DP','Belum Full Payment'];
+const L_QC=['OK','Not OK'];
+const L_KONF=['On Scheduled','Rescheduled'];
+const BULAN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const HARI=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const LS_KEY='unittrack.bsdc.v2';
+const MAN_KEYS=['fullDP','tglValid','planLunas','tglDR','planSampai','tglQC','decIn','decOut','cuci','hasilQC','ketDefect','syarat','tglMohonSTNK','tglSTNKJadi','tglPlan','slot','jarak','jamSerah','alamat','konfirmasi','reschedule','bstkCetak','bstkKembali','ketDelivery'];
+const DEF_SET=()=>({jamBuka:'08:00',jamTutup:'17:00',maxSlot:4,durZona0:1,
+  zones:[{n:'Zona 1',min:0,max:14,dur:2},{n:'Zona 2',min:15,max:22,dur:3},{n:'Zona 3',min:23,max:30,dur:4},{n:'Zona 4',min:31,max:38,dur:5},{n:'Zona 5',min:39,max:46,dur:6}],
+  leasingDP:['PT. TAFS','ACC'],branchLoc:['T066','T050'],pins:defPins()});
+
+/* ================= UTIL ================= */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const p2=n=>String(n).padStart(2,'0');
+const sum=(a,f)=>a.reduce((t,x)=>t+(f?f(x):x),0);
+const rp=n=>'Rp '+Math.round(n||0).toLocaleString('id-ID');
+const rpS=n=>{n=n||0;const a=Math.abs(n);if(a>=1e9)return 'Rp '+(n/1e9).toFixed(2).replace('.',',')+' M';if(a>=1e6)return 'Rp '+(n/1e6).toFixed(1).replace('.',',')+' jt';return rp(n)};
+const todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())};
+const addDays=(iso,n)=>{const [y,m,d]=iso.split('-').map(Number);const t=new Date(y,m-1,d+n);return t.getFullYear()+'-'+p2(t.getMonth()+1)+'-'+p2(t.getDate())};
+const fmtD=iso=>{if(!iso)return '';const [y,m,d]=iso.split('-');return (+d)+' '+BULAN[+m-1]+' '+String(y).slice(2)};
+const dayName=iso=>{const [y,m,d]=iso.split('-').map(Number);return HARI[new Date(y,m-1,d).getDay()]};
+const toH=s=>{if(!s)return '';const a=String(s).split(':');return (+a[0])+(+a[1]||0)/60};
+const hh=h=>{if(h===''||h==null||isNaN(h))return '';const t=Math.round(h*60);return p2(Math.floor(t/60)%24)+':'+p2(t%60)};
+const chipCls=t=>{t=String(t||'');
+  if(/^(Sudah Delivery|Di Cabang|Lunas|Terjadwal|OK|Ya|STNK Jadi|Tidak Perlu)/.test(t))return 'ok';
+  if(/^(Kirim Tagihan|Hold AR|Hold Unit|BENTROK|Tidak$|SLOT TUTUP|LEWAT|Not OK)/.test(t))return 'bad';
+  if(/^(Hold|Belum Sampai|Stok|Menunggu Valid|Menunggu Pelunasan|Menunggu Sisa|Cek Jadwal|Pilih Syarat|Isi |Belum Diajukan|Proses)/.test(t))return 'warn';
+  if(/^(Menunggu|Belum Dijadwalkan|Dalam )/.test(t))return 'info';
+  return '';};
+const chip=t=>t?`<span class="chip ${chipCls(t)}">${esc(t)}</span>`:'';
+function toast(m){const w=$('#toast');const d=document.createElement('div');d.textContent=m;w.appendChild(d);setTimeout(()=>d.remove(),3200)}
+
+/* ================= STATE ================= */
+let S, units=[], UM=new Map();
+const UI={tab:'home',s:{q:'',loc:''},h:{sales:'',q:''},u:{q:'',sales:'',view:'aktif'},jd:todayISO()};
+function freshState(){return {ar:SAMPLE.ar.slice(),dos:SAMPLE.do.slice(),stock:(SAMPLE.stock||[]).slice(),man:JSON.parse(JSON.stringify(SAMPLE.man)),fb:{},set:DEF_SET(),meta:{sample:true,arAt:null,doAt:null,stockAt:null}}}
+function emptyState(){return {ar:[],dos:[],stock:[],man:{},fb:{},set:DEF_SET(),meta:{sample:false,arAt:null,doAt:null,stockAt:null}}}
+function loadState(){try{const j=localStorage.getItem(LS_KEY);if(j){const o=JSON.parse(j);if(o&&o.ar&&o.set)return o}}catch(e){}return null}
+let saveT;function persist(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(LS_KEY,JSON.stringify(S))}catch(e){toast('Penyimpanan browser tidak tersedia. Unduh backup secara berkala.')}},250);if(typeof queueSave==='function')queueSave()}
+
+/* ================= PERHITUNGAN (setara rumus Excel) ================= */
+function compute(){
+  const set=S.set,T=todayISO();
+  const jb=toH(set.jamBuka),jt=toH(set.jamTutup),maxS=+set.maxSlot||4,d0=+set.durZona0||1;
+  const zones=[...set.zones].sort((a,b)=>a.min-b.min);
+  const maxKm=Math.max(...zones.map(z=>+z.max));
+  const lsDP=(set.leasingDP||[]).map(x=>String(x).trim().toLowerCase());
+  const arM=new Map(S.ar.map(a=>[a.chassis,a])),doM=new Map(S.dos.map(d=>[d.chassis,d]));
+  const stM=new Map((S.stock||[]).map(x=>[x.ch,x])),stLoaded=stM.size>0;
+  const branch=(set.branchLoc||[]).map(x=>String(x).trim().toUpperCase());
+  const keysDoc=[...new Set([...S.dos.map(d=>d.chassis),...S.ar.map(a=>a.chassis)])];
+  const keys=[...keysDoc,...[...stM.keys()].filter(k=>!arM.has(k)&&!doM.has(k))];
+  /* tahap 1: data unit + status AR */
+  units=keys.map(ch=>{
+    const a=arM.get(ch),d=doM.get(ch),s=stM.get(ch),m=S.man[ch]||{};
+    const leasing=(a&&a.leasing)||(d&&d.leasing)||'';
+    const u={ch,m,inAR:!!a,
+      sales:(a&&a.sales)||(d&&d.sales)||'',custNo:(a&&a.custNo)||(d&&d.custNo)||'',cust:(a&&a.cust)||(d&&d.cust)||(s?'(Stok tanpa faktur)':''),
+      grp:a?a.grp:'',billing:a?a.billing:(d?d.noFaktur:''),jenis:a?a.kjual:(leasing?'Kredit':'CSH'),leasing,
+      funcLoc:a?a.funcLoc:'',amount:a?a.amount:0,posting:a?a.posting:(d?d.tglFaktur:''),due:a?a.due:'',gi:a?a.gi:'',
+      stnkAR:a?a.stnk:'',approve:a?a.approve:'',tipe:d?d.tipe:(s?s.material:''),warna:d?d.warna:(s?s.colorDesc:''),model:s?s.matDesc:'',inStock:!!s,lok:s?s.loc:'',lokNama:s?(s.locDesc||s.loc):'',stockAge:(s&&s.age!=='')?s.age:'',noDoc:!a&&!d,outs:a?a.outs:0,aging:a?a.age:null};
+    u.stLoaded=stLoaded;u.out=false;u.pos='';
+    if(stLoaded){
+      const L=String(u.lok||'').toUpperCase();
+      if(!u.inStock){u.pos='Sudah Delivery';u.out=true}
+      else if(L==='TCUST-T066IN')u.pos='Dalam Pengiriman ke Customer';
+      else if(branch.includes(L))u.pos='Di Cabang';
+      else if(L==='T066IN')u.pos='Dalam Perjalanan ke Cabang';
+      else u.pos='Belum Sampai Cabang';
+    }
+    u.atBranch=u.pos==='Di Cabang';
+    u.kirim=!!u.gi||u.out;
+    u.fullDP=m.fullDP||'';
+    u.bucket=u.aging==null?'-':u.aging<=0?'Not Due':u.aging<=30?'1-30':u.aging<=60?'31-60':u.aging<=90?'61-90':u.aging<=120?'91-120':u.aging<=150?'121-150':'>150';
+    u.od=u.aging!=null&&u.aging>0;
+    const cr=String(u.jenis).slice(0,2)==='CR',fp=u.fullDP;
+    let st;
+    if(!u.inAR)st='Lunas (keluar dari AR)';
+    else if(u.outs<=0)st='Lunas';
+    else if(fp==='')st='Isi Full DP / Payment';
+    else if(fp==='Full Payment')st='Lunas';
+    else if(fp!=='Full DP')st=cr?'Menunggu Pelunasan DP':'Menunggu Pelunasan Unit';
+    else if(!cr)st='Menunggu Sisa Pembayaran';
+    else if(!u.kirim)st='Menunggu Pengiriman Unit';
+    else if(!u.approve)st='Kirim Tagihan Segera';
+    else if(!m.tglValid)st='Menunggu Valid Leasing';
+    else st='Menunggu Pembayaran';
+    u.stAR=st;
+    u.posisi=u.pos?(u.pos+(u.lokNama?' · '+u.lokNama:'')):(u.funcLoc||'');
+    u.fb=(fp||'-')+' / '+(u.posisi||'-')+' / '+(u.kirim?'Unit Sudah Kirim'+(u.gi?' '+fmtD(u.gi):''):'Unit Belum Kirim');
+    u.tglSTNKJadi=m.tglSTNKJadi||u.stnkAR||'';
+    u.syarat=m.syarat||'';
+    u.stStnk=!u.syarat?'Pilih Syarat':u.syarat==='Tanpa STNK'?'Tidak Perlu':u.tglSTNKJadi?'STNK Jadi':!m.tglMohonSTNK?'Belum Diajukan':'Proses STNK';
+    u.search=(u.cust+' '+ch+' '+u.sales+' '+u.tipe+' '+u.model+' '+u.warna+' '+u.leasing+' '+u.billing+' '+u.lokNama).toLowerCase();
+    return u;
+  });
+  /* tahap 2: zona & durasi */
+  units.forEach(u=>{
+    const m=u.m;u.slot=m.slot||'';u.tglPlan=m.tglPlan||'';u.jarak=(m.jarak===undefined||m.jarak==='')?'':+m.jarak;
+    if(u.slot===SC){u.zona='Zona 0';u.dur=d0}
+    else if(u.jarak===''){u.zona='';u.dur=''}
+    else if(u.jarak>maxKm){u.zona='Luar Zona';u.dur=''}
+    else{let z=zones[0];zones.forEach(x=>{if(u.jarak>=x.min)z=x});u.zona=z.n;u.dur=+z.dur}
+  });
+  /* tahap 3: jam berangkat/kembali per slot */
+  const sd={};
+  units.forEach(u=>{if(u.tglPlan&&u.slot&&u.slot!==SC&&u.dur!==''){const k=u.tglPlan+'|'+u.slot;sd[k]=Math.max(sd[k]||0,u.dur)}});
+  units.forEach(u=>{
+    u.jamB='';u.jamK='';
+    if(!u.tglPlan||!u.slot)return;
+    if(u.slot===SC){const j=toH(u.m.jamSerah);if(j!==''){u.jamB=j;u.jamK=j+d0}return}
+    const n=SLOTS.indexOf(u.slot);let before=0;
+    for(let i=0;i<n;i++)before+=sd[u.tglPlan+'|'+SLOTS[i]]||0;
+    u.jamB=jb+before;u.jamK=u.jamB+(sd[u.tglPlan+'|'+u.slot]||0);
+  });
+  /* tahap 4: cek jadwal */
+  const onDate=(d,sl)=>units.filter(x=>x.tglPlan===d&&x.slot===sl);
+  const freeSlots=d=>SLOTS.slice(0,maxS).filter(s=>onDate(d,s).length===0);
+  units.forEach(u=>{
+    const rd=u.m.reschedule||'';
+    let base='';
+    if(u.tglPlan&&u.slot){
+      if(u.slot===SC){
+        if(u.jamB==='')base='Isi jam serah terima';
+        else if(u.jamK>jt)base='Lewat jam tutup';
+        else{base='OK - Serah Terima Cabang';
+          if(units.some(x=>x.tglPlan===u.tglPlan&&x.slot&&x.slot!==SC&&x.jamB!==''&&x.jamB<u.jamK&&x.jamK>u.jamB))base+=' (bersamaan dgn pengiriman luar)';}
+      }else{
+        const n=SLOTS.indexOf(u.slot)+1;
+        if(u.jarak==='')base='Isi jarak (km)';
+        else if(u.zona==='Luar Zona')base='Luar Zona - cek manual';
+        else if(units.some(x=>x.tglPlan===u.tglPlan&&x.slot===u.slot&&x.cust!==u.cust))base='BENTROK: slot dipakai customer lain';
+        else if(n>1&&n<=maxS&&onDate(u.tglPlan,SLOTS[n-2]).length===0)base='Isi slot sebelumnya dulu';
+        else if(u.slot==='Cadangan')base=u.jamK>jt?'OK - Urgent (lewat jam tutup)':'OK - Urgent';
+        else base=u.jamK>jt?'SLOT TUTUP: lewat jam tutup':'OK';
+      }
+    }
+    if(rd&&rd!==u.tglPlan){
+      if(rd<T)base='RESCHEDULE: tgl '+fmtD(rd)+' sudah lewat';
+      else{const f=freeSlots(rd);base='RESCHEDULE ke '+fmtD(rd)+': '+(f.length===0?'PENUH – pakai Cadangan / Serah Terima Cabang / pilih tgl lain':f.length+' slot tersedia ('+f.join(', ')+') – ubah Tgl Plan & Slot')}
+    }
+    u.cek=base;
+  });
+  /* tahap 5: status delivery */
+  units.forEach(u=>{
+    const m=u.m,cr=String(u.jenis).slice(0,2)==='CR';
+    const jalurDP=cr&&lsDP.includes(String(u.leasing).trim().toLowerCase());
+    const fp=u.fullDP;
+    const lunasPay=u.outs<=0||fp==='Full Payment'||u.stAR.slice(0,5)==='Lunas';
+    const lunasDP=lunasPay||fp==='Full DP';
+    const stnkOK=u.syarat==='Tanpa STNK'||!!u.tglSTNKJadi;
+    const qcOK=m.hasilQC==='OK',cabangOK=u.atBranch||!!m.tglDR,cuciOK=!!m.cuci;
+    let hold='';
+    if(jalurDP){
+      if(!lunasDP)hold='Hold AR - DP Belum Lunas';
+      else if(!u.syarat)hold='Hold STNK - Pilih Syarat STNK';
+      else if(!stnkOK)hold='Hold STNK - Tunggu STNK Jadi';
+      else if(!qcOK)hold='Hold QC - Belum QC';
+    }else{
+      if(!lunasPay)hold='Hold AR - Belum Lunas Payment';
+      else if(!u.syarat)hold='Hold STNK - Pilih Syarat STNK';
+      else if(!stnkOK)hold='Hold STNK - Tunggu STNK Jadi';
+      else if(!cabangOK)hold='Hold Unit - Belum Sampai Cabang';
+      else if(!qcOK)hold='Hold QC - Belum QC';
+      else if(!cuciOK)hold='Hold Cuci - Belum Cuci';
+    }
+    u.done=!!m.bstkKembali||u.out;
+    u.stDel=u.done?'Sudah Delivery':hold?hold:!u.tglPlan?'Belum Dijadwalkan':(u.cek.slice(0,2)==='OK'?'Terjadwal':'Cek Jadwal');
+    u.hold=!u.done&&!!hold;
+    u.boleh=u.hold?'Tidak':'Ya';
+    u.kat=u.done?'Sudah Delivery':u.hold?u.stDel.split(' - ')[0]:u.stDel;
+    if(u.noDoc&&!m.bstkKembali){u.done=false;u.hold=false;u.boleh='-';u.stDel='Stok tanpa faktur';u.kat='Stok'}
+  });
+  UM=new Map(units.map(u=>[u.ch,u]));
+}
+
+
+/* ================= SINKRONISASI GOOGLE SHEET ================= */
+const SYNC_URL='';
+const SYNC={url:'',code:'',ver:0,av:0,on:false,pending:false,status:'',dp:false};
+(function(){try{
+  const q=new URLSearchParams(location.search).get('s');
+  if(q){localStorage.setItem('unittrack.sync',JSON.stringify({url:q,code:''}));try{history.replaceState(null,'',location.pathname)}catch(e){}}
+  const j=JSON.parse(localStorage.getItem('unittrack.sync')||'null');if(j&&j.url){SYNC.url=j.url;SYNC.code=j.code||''}
+}catch(e){}
+if(!SYNC.url&&SYNC_URL)SYNC.url=SYNC_URL;})();
+function todayHTML(){const t=todayISO();return `${dayName(t)}, ${fmtD(t)}<br><span style="opacity:.7">${S.meta.arAt?'AR '+S.meta.arAt:'AR: data contoh'}${S.meta.stockAt?' · Stock '+S.meta.stockAt:''}${SYNC.on&&SYNC.status?' · '+SYNC.status:''}</span>`}
+function badge(t){SYNC.status=t;const el=$('#today');if(el)el.innerHTML=todayHTML()}
+async function api(body,get){
+  const payload=Object.assign({code:SYNC.code},body);
+  if(get){const q=new URLSearchParams();for(const k in payload)if(payload[k]!==undefined)q.set(k,String(payload[k]));
+    const r=await fetch(SYNC.url+(SYNC.url.includes('?')?'&':'?')+q.toString());return r.json()}
+  const r=await fetch(SYNC.url,{method:'POST',body:JSON.stringify(payload)});return r.json();
+}
+async function pullState(){
+  const r=await api({action:'get'},true);
+  if(r.err==='need_code'){askCode();return false}
+  if(!r.ok)throw new Error(r.err||'gagal');
+  SYNC.ver=r.version||0;SYNC.av=r.adminVer||0;SYNC.dp=!!r.defaultPins;
+  if(r.state){const pins=S.set&&S.set.pins;S=r.state;fixState();if(pins)S.set.pins=pins;try{localStorage.setItem(LS_KEY,JSON.stringify(S))}catch(e){}compute();renderNav();PG[UI.tab].render()}
+  badge('Online ✓');return true;
+}
+let saveTimer;
+function queueSave(){if(!SYNC.on||ROLE!=='admin')return;SYNC.pending=true;clearTimeout(saveTimer);saveTimer=setTimeout(doSave,1200);badge('Menyimpan…')}
+async function doSave(){
+  if(!SYNC.on||!SYNC.pending)return;SYNC.pending=false;badge('Menyimpan…');
+  const st=JSON.parse(JSON.stringify(S));if(st.set)delete st.set.pins;
+  try{
+    const r=await api({action:'save',role:'admin',pin:PIN,baseAdmin:SYNC.av,state:st,mirror:buildMirror()});
+    if(r.ok){SYNC.ver=r.version;SYNC.av=r.adminVer;badge('Tersimpan online ✓');if(r.merged)await pullState()}
+    else if(r.err==='conflict'){toast('Data diubah admin lain. Memuat data terbaru…');await pullState()}
+    else if(r.err==='pin'||r.err==='terkunci'){toast(r.err==='pin'?'PIN admin tidak valid. Masuk ulang.':'Terlalu banyak percobaan. Tunggu 10 menit.');badge('Gagal menyimpan')}
+    else{toast('Gagal menyimpan online: '+r.err);SYNC.pending=true;badge('Gagal menyimpan')}
+  }catch(e){SYNC.pending=true;badge('Offline, belum tersimpan')}
+}
+function buildMirror(){
+  const list=units.filter(u=>!u.noDoc&&(u.inAR||!u.done)).sort((a,b)=>(a.sales||'').localeCompare(b.sales||'')||(a.done-b.done)||a.cust.localeCompare(b.cust));
+  const rows=dashObjs(list);if(!rows.length)return null;
+  const header=Object.keys(rows[0]);
+  const iso=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+  return {header,rows:rows.map(o=>header.map(k=>{const v=o[k];return v instanceof Date?iso(v):(v==null?'':v)}))};
+}
+let pollT,pollInit=false;
+function startPoll(){clearInterval(pollT);pollT=setInterval(pollOnce,30000);if(!pollInit){pollInit=true;document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollOnce()})}}
+async function pollOnce(){
+  if(!SYNC.on||document.hidden||!$('#modal').hidden)return;
+  try{
+    if(SYNC.pending){await doSave();return}
+    const busy=UI.tab==='admin'&&['pasteAR','pasteDO','pasteStock'].some(id=>{const e=$('#'+id);return e&&e.value.trim()});
+    const r=await api({action:'ping'},true);
+    if(r.err==='need_code'){askCode();return}
+    if(r.ok){SYNC.dp=!!r.defaultPins;if(r.version!==SYNC.ver&&!busy)await pullState();else badge('Online ✓')}
+  }catch(e){badge('Offline')}
+}
+function askCode(){
+  const M=$('#modal');M.innerHTML=`<div class="sheet" style="width:min(380px,100%)"><div class="sheet-h"><h2 style="margin:0">Kode akses</h2></div><div class="sheet-b"><label class="fld"><span>Masukkan kode akses untuk melihat data</span><input type="password" id="kc" autocomplete="off"></label></div><div class="sheet-f"><button class="btn" id="kgo">Lanjut</button></div></div>`;M.hidden=false;
+  $('#kgo').onclick=()=>{SYNC.code=$('#kc').value;try{const j=JSON.parse(localStorage.getItem('unittrack.sync')||'{}');j.url=SYNC.url;j.code=SYNC.code;localStorage.setItem('unittrack.sync',JSON.stringify(j))}catch(e){}closeModal();pullState().then(()=>startPoll()).catch(()=>badge('Offline'))};
+}
+async function syncConnect(){
+  const u=(($('#syurl')||{}).value||'').trim();
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/[^\/]+\/exec/.test(u))return toast('Link tidak valid. Harus berawalan https://script.google.com/macros/s/ dan berakhiran /exec');
+  const old=SYNC.url;SYNC.url=u;
+  try{
+    const r=await api({action:'ping'},true);
+    if(r.err==='need_code'){askCode();return}
+    if(!r.ok)throw new Error(r.err||'gagal');
+    try{localStorage.setItem('unittrack.sync',JSON.stringify({url:u,code:SYNC.code}))}catch(e){}
+    SYNC.on=true;SYNC.ver=r.version||0;SYNC.av=r.adminVer||0;SYNC.dp=!!r.defaultPins;
+    setRole('view');
+    if(r.version)await pullState();
+    afterRole();startPoll();badge('Online ✓');
+    toast(r.version?'Terhubung. Data online dimuat. Masuk ulang dengan PIN dari skrip.':'Terhubung. Sheet masih kosong. Masuk ulang dengan PIN dari skrip, lalu kirim data.');
+  }catch(e){SYNC.url=old;toast('Tidak bisa terhubung. Pastikan Web App di-deploy dengan akses “Siapa saja”.')}
+}
+async function syncPush(){
+  if(!SYNC.on)return;
+  if(!confirm('Data di Google Sheet akan diganti dengan data di perangkat ini. Lanjutkan?'))return;
+  try{const p=await api({action:'ping'},true);SYNC.av=p.adminVer||0;SYNC.pending=true;await doSave()}catch(e){toast('Tidak bisa terhubung ke server')}
+}
+async function syncPull(){
+  if(!SYNC.on)return;
+  if(!confirm('Data di perangkat ini akan diganti dengan data dari Google Sheet. Lanjutkan?'))return;
+  try{await pullState();toast('Data dari Sheet dimuat')}catch(e){toast('Tidak bisa terhubung ke server')}
+}
+function syncLink(){
+  const link=location.href.split('?')[0].split('#')[0]+'?s='+encodeURIComponent(SYNC.url);
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(link).then(()=>toast('Link disalin. Kirim ke HP / sales.'),()=>prompt('Salin link ini:',link));
+  else prompt('Salin link ini:',link);
+}
+function syncOff(){
+  if(!confirm('Putuskan dari Google Sheet? Halaman kembali memakai data di perangkat ini saja.'))return;
+  try{localStorage.removeItem('unittrack.sync')}catch(e){}
+  SYNC.on=false;SYNC.url='';clearInterval(pollT);setRole('view');afterRole();toast('Terputus dari Google Sheet');
+}
+function syncCard(){
+  if(window.claude)return `<div class="card" style="margin-bottom:12px"><h3>Data bersama (Google Sheet)</h3><div class="sub">Fitur ini hanya jalan di file HTML (GitHub Pages atau dibuka langsung), tidak di tampilan Claude.</div></div>`;
+  return `<div class="card" style="margin-bottom:12px"><h3>Data bersama (Google Sheet) <span class="tag">${SYNC.on?'Terhubung · versi '+SYNC.ver:'Belum terhubung'}</span></h3>
+    <div class="fg"><label class="fld" style="grid-column:1/-1"><span>Link Web App dari Google Apps Script</span><input type="text" id="syurl" value="${esc(SYNC.url)}" placeholder="https://script.google.com/macros/s/…/exec"></label></div>
+    <div class="bar" style="margin-top:10px"><button class="btn" data-act="synccon">${SYNC.on?'Simpan ulang link':'Hubungkan'}</button>${SYNC.on?`<button class="btn ghost" data-act="syncpush">Kirim data ini ke Sheet</button><button class="btn ghost" data-act="syncpull">Ambil data dari Sheet</button><button class="btn ghost" data-act="synclink">Salin link untuk HP / sales</button><button class="btn ghost" data-act="syncoff">Putuskan</button>`:''}</div>
+    <div class="sub">${SYNC.on?'PIN admin dan sales diatur di skrip Google (ADMIN_PIN dan SALES_PIN).':'Ikuti langkah pemasangan, lalu tempel link Web App di sini.'}</div></div>`;
+}
+
+/* ================= PERAN & KUNCI ================= */
+const ROLES={view:'Lihat saja',sales:'Sales',admin:'Admin'};
+let ROLE='view';try{ROLE=sessionStorage.getItem('ut.role')||'view'}catch(e){}
+const hashPin=s=>{let h=5381;for(const c of String(s))h=((h<<5)+h+c.charCodeAt(0))>>>0;return String(h)};
+const defPins=()=>({admin:hashPin('1234'),sales:hashPin('0000')});
+const can=r=>ROLE==='admin'||(r==='sales'&&ROLE==='sales');
+let ME='';try{ME=sessionStorage.getItem('ut.me')||''}catch(e){}
+let PIN='';try{PIN=sessionStorage.getItem('ut.pin')||''}catch(e){}
+function setRole(r,me,pin){ROLE=r;ME=me||'';PIN=pin||'';try{sessionStorage.setItem('ut.role',r);sessionStorage.setItem('ut.me',ME);sessionStorage.setItem('ut.pin',PIN)}catch(e){}}
+const pinDefault=()=>!SYNC.on&&(S.set.pins.admin===hashPin('1234')||S.set.pins.sales===hashPin('0000'));
+function openLogin(){
+  const M=$('#modal');
+  M.innerHTML=`<div class="sheet" style="width:min(380px,100%)"><div class="sheet-h"><div><h2 style="margin:0">Masuk</h2><div class="sub">Sekarang: <b>${ROLES[ROLE]}</b></div></div><button class="btn ghost sm" data-act="close">✕</button></div>
+  <div class="sheet-b"><div class="grid">
+    <label class="fld"><span>Masuk sebagai</span><select id="lr"><option value="sales">Sales (konfirmasi pengiriman)</option><option value="admin">Admin (isi semua data)</option></select></label>
+    <label class="fld" id="lnw"><span>Nama sales</span><select id="ln"><option value="">Pilih nama…</option>${salesList().map(n=>`<option>${esc(n)}</option>`).join('')}</select></label>
+    <label class="fld"><span>PIN</span><input type="password" id="lp" inputmode="numeric" autocomplete="off"></label>
+    ${pinDefault()?'<div class="sub">PIN awal: Admin 1234 · Sales 0000. Ganti di menu Admin → Keamanan.</div>':''}
+  </div></div>
+  <div class="sheet-f">${ROLE!=='view'?'<button class="btn ghost" data-act="logout">Keluar</button>':''}<button class="btn" id="lgo">Masuk</button></div></div>`;
+  M.hidden=false;
+  const go1=async()=>{const r=$('#lr').value;const me=r==='sales'?$('#ln').value:'';if(r==='sales'&&!me)return toast('Pilih nama sales dulu');const pin=$('#lp').value;let ok=false;
+    if(SYNC.on){try{const x=await api({action:'login',role:r,pin},false);if(x.err==='need_code'){closeModal();return askCode()}if(x.err==='terkunci')return toast('Terlalu banyak percobaan. Coba lagi 10 menit lagi.');ok=!!x.ok}catch(e){return toast('Tidak bisa terhubung ke server')}}
+    else ok=hashPin(pin)===S.set.pins[r];
+    if(ok){setRole(r,me,pin);if(me){UI.h.sales=me;UI.u.sales=me}closeModal();afterRole();toast('Masuk sebagai '+(me||ROLES[r]))}else toast('PIN salah')};
+  const tg=()=>{$('#lnw').style.display=$('#lr').value==='sales'?'':'none'};$('#lr').onchange=tg;tg();
+  $('#lgo').onclick=go1;$('#lp').onkeydown=e=>{if(e.key==='Enter')go1()};setTimeout(()=>{const p=$('#lp');if(p)p.focus()},30);
+}
+function afterRole(){if(UI.tab==='admin'&&!can('admin'))UI.tab='home';renderNav();PG[UI.tab].render()}
+
+/* ================= HELPER ================= */
+const PG={};
+function go(tab){if(tab==='admin'&&!can('admin'))tab='home';UI.tab=tab;renderNav();PG[tab].render();window.scrollTo({top:0})}
+function renderNav(){
+  const tabs=[['home','Dashboard'],['unit','Unit'],['stok','Free Stock'],['jd','Jadwal']];if(can('admin'))tabs.push(['admin','Admin']);
+  $('#nav').innerHTML=tabs.map(([k,l])=>`<button class="${UI.tab===k?'on':''}" data-act="tab" data-tab="${k}">${l}</button>`).join('');
+  $('#role').textContent=(ROLE==='view'?'👁 ':ROLE==='sales'?'🧑‍💼 ':'🔑 ')+(ROLE==='sales'&&ME?ME:ROLES[ROLE])+' ▾';
+  $('#today').innerHTML=todayHTML();
+}
+function refresh(){compute();renderNav();PG[UI.tab].render()}
+function banner(){let h='';
+  if(can('admin')&&SYNC.on&&SYNC.dp)h+=`<div class="banner">PIN di skrip Google masih bawaan (1234 / 0000). Ganti ADMIN_PIN dan SALES_PIN di skrip, lalu Deploy ulang.</div>`;
+  if(!S.stock.length&&!S.meta.sample)h+=`<div class="banner">Data <b>All Stock</b> belum dimasukkan, jadi posisi unit dan status terkirim belum akurat. ${can('admin')?'Masukkan di menu <b>Admin</b>.':'Minta admin memasukkannya.'}</div>`;
+  if(S.meta.sample)h+=`<div class="banner">Ini <b>data contoh</b>. ${can('admin')?'Buka menu <b>Admin</b> untuk memasukkan report asli.':'Admin perlu memasukkan report asli.'}</div>`;
+  if(can('admin')&&pinDefault())h+=`<div class="banner">PIN masih bawaan. Ganti di <b>Admin → Keamanan</b> supaya tidak ada yang bisa masuk sembarangan.</div>`;
+  return h}
+const optList=(list,sel,blank)=>(blank!==undefined?`<option value="">${esc(blank)}</option>`:'')+list.map(o=>`<option ${o===sel?'selected':''}>${esc(o)}</option>`).join('');
+const unitName=u=>((u.model||u.tipe||'')+' '+(u.warna||'')).trim();
+const posCell=u=>u.pos?chip(u.pos)+`<div class="sub">${esc(u.lokNama)}${u.stockAge!==''?' · umur '+u.stockAge+' hari':''}</div>`:`<span class="muted">${esc(u.funcLoc)||'-'}</span>`;
+const salesList=()=>[...new Set(units.map(u=>u.sales))].filter(Boolean).sort();
+function jadwalTxt(u){return u.tglPlan?`${fmtD(u.tglPlan)}<div class="sub">${esc(u.slot)}${u.jamB!==''?' · '+hh(u.jamB)+'–'+hh(u.jamK):''}</div>`:'<span class="muted">-</span>'}
+function nextStep(u){const s=u.stDel;
+  if(u.noDoc)return 'Unit ada di stok tetapi belum ada faktur di report AR / DO.';
+  if(u.done)return u.out?'Unit sudah delivery.':'Unit sudah diserahkan.';
+  if(s.startsWith('Hold AR'))return 'Menunggu pembayaran. Tim AR: tindak lanjuti, lalu isi Full DP / Full Payment bila sudah masuk.';
+  if(s==='Hold STNK - Pilih Syarat STNK')return 'Admin: isi syarat kirim (dengan atau tanpa STNK).';
+  if(s.startsWith('Hold STNK'))return 'Menunggu STNK jadi. Admin: isi tanggal STNK jadi.';
+  if(s.startsWith('Hold Unit'))return 'Unit belum di cabang (posisi: '+(u.lokNama||u.lok||'belum diketahui')+'). Menunggu tiba di cabang.';
+  if(s.startsWith('Hold QC'))return 'Admin: lakukan QC dan isi hasilnya.';
+  if(s.startsWith('Hold Cuci'))return 'Admin: centang “Sudah cuci”.';
+  if(s==='Belum Dijadwalkan')return 'Siap kirim. Admin: pilih tanggal, slot, dan jarak di bagian Jadwal Kirim.';
+  if(s==='Cek Jadwal')return 'Perbaiki jadwal: '+u.cek;
+  return 'Sudah terjadwal. Tinggal kirim sesuai jadwal.';}
+
+/* ================= BERANDA ================= */
+const VIEWS={
+  aktif:['Semua unit aktif',u=>!u.done&&!u.noDoc],
+  dicab:['Di cabang, belum kirim',u=>!u.done&&!u.noDoc&&u.atBranch],
+  boleh:['Boleh kirim',u=>!u.done&&!u.noDoc&&!u.hold],
+  hold:['Belum boleh kirim',u=>!u.done&&u.hold],
+  belum:['Belum dijadwalkan',u=>u.stDel==='Belum Dijadwalkan'],
+  cek:['Jadwal perlu dicek',u=>u.stDel==='Cek Jadwal'],
+  od:['Tagihan overdue',u=>u.inAR&&u.od],
+  tagih:['Perlu tagihan',u=>u.stAR==='Kirim Tagihan Segera'||u.stAR==='Menunggu Valid Leasing'],
+  done:['Sudah terkirim',u=>u.done]
+};
+PG.home={
+  render(){
+    const f=UI.h;
+    $('#main').innerHTML=`${banner()}
+    <div class="bar"><div><h2>Dashboard Unit Outstanding</h2><div class="muted">Klik nama sales untuk memfilter, klik unit untuk melihat detail.</div></div></div>
+    <div class="bar">
+      <select data-f="h.sales" style="font-weight:700">${optList(salesList(),f.sales,'Semua sales')}</select>
+      <input type="search" placeholder="Cari customer / no rangka…" value="${esc(f.q)}" data-f="h.q" style="flex:1;min-width:200px">
+      <button class="btn ghost sm" data-act="dashx">Unduh Excel</button>
+    </div>
+    <div class="grid kpis" id="hk"></div>
+    <div id="hs"></div>
+    <div id="hd"></div>`;
+    this.fill();
+  },
+  scope(){const f=UI.h,q=f.q.toLowerCase();
+    return units.filter(u=>!u.noDoc&&(u.inAR||!u.done)&&(!f.sales||u.sales===f.sales)&&(!q||u.search.includes(q)))},
+  fill(){
+    const r=this.scope(),f=UI.h;
+    const kpi=(c,l,v,s)=>`<div class="kpi ${c}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s||''}</div></div>`;
+    const act=r.filter(u=>!u.done),L=r.filter(isLunas),BL=r.filter(u=>!isLunas(u));
+    $('#hk').innerHTML=kpi('','Masih outstanding',rpS(sum(r,u=>u.outs)),r.filter(u=>u.inAR).length+' unit')+kpi('green','Sudah lunas',L.length,'unit')+kpi('red','Belum lunas',BL.length,'unit')+kpi('green','Bisa kirim',act.filter(u=>!u.hold).length,'unit')+kpi('amber','Belum bisa kirim',act.filter(u=>u.hold).length,'unit');
+    const names=[...new Set(r.map(u=>u.sales||'(tanpa sales)'))].sort();
+    const row=n=>{const us=r.filter(u=>(u.sales||'(tanpa sales)')===n),ac=us.filter(u=>!u.done);
+      return `<tr class="clk" data-act="hsales" data-s="${esc(n)}"><td><a class="lnk"><b>${esc(n)}</b></a></td><td class="num">${us.length}</td><td class="num"><b>${rp(sum(us,u=>u.outs))}</b></td><td class="num" style="color:var(--green)">${us.filter(isLunas).length}</td><td class="num" style="color:var(--red)">${us.filter(u=>!isLunas(u)).length}</td><td class="num" style="color:var(--green)">${ac.filter(u=>!u.hold).length}</td><td class="num" style="color:var(--amber)">${ac.filter(u=>u.hold).length}</td></tr>`};
+    $('#hs').innerHTML=f.sales?'':`<div class="card" style="margin-bottom:12px"><h3>Per sales</h3><div class="tw" style="max-height:none"><table><thead><tr><th>Sales</th><th class="num">Unit</th><th class="num">Outstanding</th><th class="num">Lunas</th><th class="num">Belum lunas</th><th class="num">Bisa kirim</th><th class="num">Belum bisa</th></tr></thead><tbody>${names.map(row).join('')||'<tr><td colspan=7 class="empty">Tidak ada unit.</td></tr>'}</tbody></table></div></div>`;
+    let body='';
+    names.forEach(n=>{
+      const us=r.filter(u=>(u.sales||'(tanpa sales)')===n).sort((a,b)=>(a.done-b.done)||((isLunas(a)?1:0)-(isLunas(b)?1:0))||(a.tglPlan||'9999').localeCompare(b.tglPlan||'9999')||a.cust.localeCompare(b.cust));
+      body+=`<tr><td colspan="5" style="background:var(--brand-soft);font-weight:800;color:var(--brand)">${esc(n)} <span class="muted" style="font-weight:600">· ${us.length} unit · outstanding ${rp(sum(us,u=>u.outs))}</span></td></tr>`;
+      body+=us.slice(0,300).map(u=>`<tr class="clk" data-act="open" data-ch="${esc(u.ch)}">
+        <td><b>${esc(u.cust)}</b><div class="sub">${esc(unitName(u))} · <span class="mono">…${esc(u.ch.slice(-6))}</span></div><div class="sub">${esc(posTxt(u))}</div></td>
+        <td>${payCell(u)}</td><td>${bisaCell(u)}</td><td>${planCell(u)}</td><td>${konfCell(u)}</td></tr>`).join('');
+    });
+    $('#hd').innerHTML=`<div class="tw" style="max-height:none"><table><thead><tr><th>Customer / Unit</th><th>Pembayaran</th><th>Status kirim</th><th>Jadwal kirim</th><th>Konfirmasi sales</th></tr></thead><tbody>${body||'<tr><td colspan=5 class="empty">Tidak ada unit outstanding.</td></tr>'}</tbody></table></div>`;
+  }
+};
+const cp=(t,c)=>`<span class="chip ${c||''}">${esc(t)}</span>`;
+const isLunas=u=>u.stAR.slice(0,5)==='Lunas';
+function posTxt(u){if(u.done)return 'Sudah delivery';if(u.pos)return u.pos+(u.lokNama?' · '+u.lokNama:'');return u.funcLoc?'Posisi: '+u.funcLoc:''}
+function payCell(u){
+  const od=u.inAR&&u.od?`<div class="sub" style="color:var(--red)">Overdue ${u.aging} hari</div>`:'';
+  if(isLunas(u))return cp('Lunas','ok')+(u.outs>0?`<div class="sub">Outstanding ${rp(u.outs)}</div>`:'');
+  return cp('Belum lunas','bad')+`<div><b>${rp(u.outs)}</b></div>${od}`}
+function bisaCell(u){
+  if(u.done)return cp('Sudah delivery','ok');
+  if(!u.hold)return cp('BISA KIRIM','ok');
+  return cp('BELUM BISA KIRIM','bad')+`<div class="sub">${esc(u.stDel.replace(/^Hold /,''))}</div>`}
+function planCell(u){
+  if(u.done)return '<span class="muted">-</span>';
+  if(!u.tglPlan)return '<span class="muted">Belum dijadwalkan</span>';
+  const ok=u.cek.slice(0,2)==='OK';
+  return `<b>${dayName(u.tglPlan)}, ${fmtD(u.tglPlan)}</b><div class="sub">${esc(u.slot)}${u.jamB!==''?' · '+hh(u.jamB)+'–'+hh(u.jamK):''}</div>${ok?'':`<div class="sub" style="color:var(--red)">${esc(u.cek)}</div>`}`}
+function konfCell(u){
+  if(u.done)return '<span class="muted">-</span>';
+  const m=u.m;
+  if(m.konfirmasi==='On Scheduled')return cp('On Schedule','ok');
+  if(m.konfirmasi==='Rescheduled')return cp('Reschedule','warn')+(m.reschedule?`<div class="sub">usul ${fmtD(m.reschedule)}</div>`:'');
+  return u.tglPlan?'<span class="muted">Belum konfirmasi</span>':'<span class="muted">-</span>'}
+async function dashExport(){
+  const dl=window.__dl;if(!dl||typeof XLSX==='undefined'){toast('Unduh tidak tersedia di tampilan ini');return}
+  const r=PG.home.scope().sort((a,b)=>(a.sales||'').localeCompare(b.sales||'')||(a.done-b.done)||a.cust.localeCompare(b.cust));
+  const rows=dashObjs(r);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{}],{cellDates:true,dateNF:'dd-mmm-yy'}),'Dashboard');
+  try{await dl.save({filename:'Dashboard_Unit_Outstanding_'+todayISO()+'.xlsx',data:XLSX.write(wb,{type:'array',bookType:'xlsx',cellDates:true})});toast('File Excel siap')}catch(e){if(e&&e.code!=='declined')toast('Gagal mengunduh')}
+}
+function dashObjs(r){return r.map(u=>({'Sales':u.sales,'Customer':u.cust,'No Rangka':u.ch,'Unit':unitName(u),'Pembayaran':isLunas(u)?'Lunas':'Belum lunas','Outstanding (Rp)':u.outs,'Aging (hari)':u.aging==null?'':u.aging,'Jatuh Tempo':toD(u.due),'Posisi Unit':u.done?'Sudah delivery':u.pos,'Lokasi':u.lokNama,'Status Kirim':u.done?'Sudah delivery':u.hold?'Belum bisa kirim':'Bisa kirim','Alasan':u.done?'':u.stDel,'Tgl Plan Delivery':toD(u.tglPlan),'Slot':u.slot,'Jam':u.jamB===''?'':hh(u.jamB)+'-'+hh(u.jamK),'Konfirmasi Sales':u.m.konfirmasi==='On Scheduled'?'On Schedule':u.m.konfirmasi==='Rescheduled'?'Reschedule':'','Tgl Usulan Reschedule':toD(u.m.reschedule)}));}
+function konfCard(u){
+  if(ROLE!=='sales')return '';
+  if(u.sales!==ME)return `<div class="banner">Unit ini milik sales lain. Anda hanya bisa konfirmasi unit sendiri.</div>`;
+  if(u.done)return '';
+  const m=u.m;
+  const cur=m.konfirmasi==='On Scheduled'?cp('On Schedule','ok'):m.konfirmasi==='Rescheduled'?cp('Reschedule'+(m.reschedule?' ke '+fmtD(m.reschedule):''),'warn'):'<span class="muted">belum dikonfirmasi</span>';
+  return `<div class="sec" style="background:var(--brand-soft);border-radius:12px;padding:12px"><h4>Konfirmasi pengiriman ke customer</h4>
+    <div style="margin-bottom:8px">Jadwal kirim: <b>${u.tglPlan?dayName(u.tglPlan)+', '+fmtD(u.tglPlan):'belum dijadwalkan'}</b> · Konfirmasi saat ini: ${cur}</div>
+    <div class="bar"><button type="button" class="btn" data-act="konf" data-ch="${esc(u.ch)}">✔ On Schedule</button><button type="button" class="btn ghost" data-act="konfr">↻ Reschedule</button></div>
+    <div id="rsw" hidden><label class="fld"><span>Tanggal usulan baru</span><input type="date" id="rsd" min="${todayISO()}"></label><div class="bar" style="margin-top:8px"><button type="button" class="btn" data-act="konfsave" data-ch="${esc(u.ch)}">Kirim konfirmasi reschedule</button></div></div></div>`}
+async function setKonf(ch,v,date){
+  const u=UM.get(ch);if(!u||ROLE!=='sales'||u.sales!==ME)return toast('Tidak diizinkan');
+  const msg=v==='On Scheduled'?'Terkonfirmasi: On Schedule':'Terkirim: Reschedule ke '+fmtD(date);
+  if(SYNC.on){
+    try{const r=await api({action:'konf',role:'sales',pin:PIN,me:ME,ch,v,date:date||''},false);
+      if(!r.ok)return toast(r.err==='bukan_unit_anda'?'Itu bukan unit Anda':r.err==='pin'?'PIN tidak valid. Masuk ulang.':r.err==='terkunci'?'Terlalu banyak percobaan. Tunggu 10 menit.':'Gagal: '+r.err);
+      closeModal();await pullState();toast(msg)}
+    catch(e){toast('Tidak bisa terhubung ke server. Coba lagi.')}
+    return;
+  }
+  const m=Object.assign({},S.man[ch]);m.konfirmasi=v;if(date)m.reschedule=date;else delete m.reschedule;m.konfAt=Date.now();S.man[ch]=m;
+  persist();closeModal();refresh();toast(msg);
+}
+
+/* ================= UNIT ================= */
+PG.unit={
+  render(){
+    const f=UI.u;
+    const pills=Object.keys(VIEWS).map(k=>`<button class="pill ${f.view===k?'on':''}" data-act="pill" data-v="${k}">${VIEWS[k][0]}<b>${units.filter(VIEWS[k][1]).length}</b></button>`).join('');
+    $('#main').innerHTML=`${banner()}
+    <div class="bar"><div><h2>Daftar Unit</h2><div class="muted">Klik baris untuk melihat detail${ROLE==='view'?'':' dan mengisi data'}.</div></div></div>
+    <div class="pills" style="margin-bottom:10px">${pills}</div>
+    <div class="bar">
+      <input type="search" placeholder="Cari nama customer / no rangka…" value="${esc(f.q)}" data-f="u.q" style="flex:1;min-width:200px">
+      <select data-f="u.sales">${optList(salesList(),f.sales,'Semua sales')}</select>
+    </div>
+    <div class="strip" id="strip"></div>
+    <div class="tw"><table><thead><tr><th>Customer / Unit</th><th>Sales</th><th>Posisi unit</th><th>Tagihan</th><th>Status kirim</th><th>Jadwal</th></tr></thead><tbody id="tb"></tbody></table></div>`;
+    this.fill();
+  },
+  rows(){const f=UI.u,q=f.q.toLowerCase();
+    const r=units.filter(u=>VIEWS[f.view][1](u)&&(!f.sales||u.sales===f.sales)&&(!q||u.search.includes(q)));
+    return f.view==='od'||f.view==='tagih'?r.sort((a,b)=>(b.aging||0)-(a.aging||0)):r.sort((a,b)=>(a.tglPlan||'9999').localeCompare(b.tglPlan||'9999')||a.cust.localeCompare(b.cust))},
+  fill(){
+    const r=this.rows();
+    $('#strip').innerHTML=`<span>Unit: <b>${r.length}</b></span><span>Total tagihan: <b>${rp(sum(r,u=>u.outs))}</b></span>`;
+    $('#tb').innerHTML=r.length?r.slice(0,300).map(u=>`<tr class="clk" data-act="open" data-ch="${esc(u.ch)}">
+      <td><b>${esc(u.cust)}</b><div class="sub">${esc(unitName(u))}</div><div class="sub mono">${esc(u.ch)}</div></td>
+      <td>${esc(u.sales)}</td>
+      <td>${posCell(u)}</td>
+      <td>${u.inAR?`<b>${rp(u.outs)}</b>`:'<span class="muted">Lunas</span>'}<div>${chip(u.stAR)}</div>${u.od?`<div class="sub" style="color:var(--red)">Overdue ${u.aging} hari</div>`:''}</td>
+      <td>${chip(u.stDel)}</td>
+      <td>${jadwalTxt(u)}</td></tr>`).join(''):`<tr><td colspan="6" class="empty">Tidak ada unit di daftar ini.</td></tr>`;
+    if(r.length>300)$('#tb').insertAdjacentHTML('beforeend','<tr><td colspan=6 class="empty">Menampilkan 300 unit pertama. Gunakan pencarian.</td></tr>');
+  }
+};
+
+/* ================= FREE STOCK ================= */
+PG.stok={
+  render(){
+    const all=units.filter(u=>u.noDoc),f=UI.s;
+    const locs=[...new Set(all.map(u=>u.lokNama||u.lok))].sort();
+    const pills=[['','Semua']].concat(locs.map(l=>[l,l])).map(([v,l])=>`<button class="pill ${f.loc===v?'on':''}" data-act="sloc" data-v="${esc(v)}">${esc(l)}<b>${v===''?all.length:all.filter(u=>(u.lokNama||u.lok)===v).length}</b></button>`).join('');
+    $('#main').innerHTML=`${banner()}
+    <div class="bar"><div><h2>Free Stock</h2><div class="muted">Unit yang ada di All Stock tetapi belum ada faktur di report AR maupun DO yang dimasukkan.</div></div></div>
+    <div class="grid kpis" id="sk"></div>
+    <div class="pills" style="margin-bottom:10px">${pills}</div>
+    <div class="bar"><input type="search" placeholder="Cari tipe / warna / no rangka…" value="${esc(f.q)}" data-f="s.q" style="flex:1;min-width:200px"><button class="btn ghost sm" data-act="fsx">Unduh Excel</button></div>
+    <div class="tw"><table><thead><tr><th>No</th><th>Unit</th><th>No rangka / No mesin</th><th>Posisi</th><th class="num">Umur stok</th><th>RRN</th></tr></thead><tbody id="tb"></tbody></table></div>`;
+    this.fill();
+  },
+  rows(){const f=UI.s,q=f.q.toLowerCase();
+    return units.filter(u=>u.noDoc&&(!f.loc||(u.lokNama||u.lok)===f.loc)&&(!q||u.search.includes(q))).sort((a,b)=>(+b.stockAge||0)-(+a.stockAge||0))},
+  fill(){
+    const r=this.rows(),sm=new Map((S.stock||[]).map(x=>[x.ch,x]));
+    const kpi=(c,l,v,s)=>`<div class="kpi ${c}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s||''}</div></div>`;
+    $('#sk').innerHTML=kpi('','Total free stock',r.length,'unit')+kpi('green','Di cabang',r.filter(u=>u.atBranch).length,'unit')+kpi('amber','Belum di cabang',r.filter(u=>!u.atBranch).length,'unit')+kpi('red','Umur stok > 60 hari',r.filter(u=>(+u.stockAge||0)>60).length,'unit');
+    $('#tb').innerHTML=!S.stock.length?`<tr><td colspan="6" class="empty">Data All Stock belum dimasukkan.</td></tr>`:r.length?r.map((u,i)=>{const x=sm.get(u.ch)||{},a=+u.stockAge||0;
+      return `<tr><td>${i+1}</td><td><b>${esc(u.model||u.tipe)}</b><div class="sub">${esc(u.warna)}</div><div class="sub mono">${esc(u.tipe)}</div></td><td class="mono">${esc(u.ch)}<div class="sub">${esc(x.engine||'')}</div></td><td>${posCell(u)}</td><td class="num">${u.stockAge===''?'-':`<span class="chip ${a>60?'bad':a>30?'warn':'ok'}">${a} hari</span>`}</td><td class="mono">${esc(x.rrn||'')}</td></tr>`}).join(''):`<tr><td colspan="6" class="empty">Tidak ada unit free stock.</td></tr>`;
+  }
+};
+async function fsExport(){
+  const dl=window.__dl;if(!dl||typeof XLSX==='undefined'){toast('Unduh tidak tersedia di tampilan ini');return}
+  const sm=new Map((S.stock||[]).map(x=>[x.ch,x]));
+  const rows=PG.stok.rows().map(u=>{const x=sm.get(u.ch)||{};return {'No Rangka':u.ch,'Model':u.model,'Tipe':u.tipe,'Warna':u.warna,'No Mesin':x.engine||'','Posisi':u.pos,'Kode Lokasi':u.lok,'Nama Lokasi':u.lokNama,'Umur Stok (hari)':u.stockAge,'RRN':x.rrn||''}});
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{}]),'Free Stock');
+  try{await dl.save({filename:'Free_Stock_'+todayISO()+'.xlsx',data:XLSX.write(wb,{type:'array',bookType:'xlsx'})});toast('File Excel siap')}catch(e){if(e&&e.code!=='declined')toast('Gagal mengunduh')}
+}
+
+/* ================= JADWAL ================= */
+PG.jd={render(){
+  const d=UI.jd,set=S.set,jb=toH(set.jamBuka),jt=toH(set.jamTutup),zones=[...set.zones].sort((a,b)=>a.dur-b.dur);
+  let prevEnd=jb,tot=0,bentrok=0;
+  const rows=SLOTS.slice(0,5).map(sl=>{
+    const us=units.filter(u=>u.tglPlan===d&&u.slot===sl);
+    const dur=us.length?Math.max(0,...us.map(u=>+u.dur||0)):0;
+    const H=prevEnd,I=H+dur,sisa=Math.max(0,jt-H);prevEnd=I;
+    const custs=[...new Set(us.map(u=>u.cust))];const bt=custs.length>1;if(bt)bentrok++;tot+=us.length;
+    let st;
+    if(us.length)st=bt?'BENTROK':sl==='Cadangan'?'TERISI (URGENT)':I>jt?'LEWAT JAM TUTUP':'TERISI';
+    else st=sl==='Cadangan'?'CADANGAN (urgent)':sisa<Math.min(...zones.map(z=>z.dur))?'TUTUP':'KOSONG';
+    const cls=/BENTROK|LEWAT|TUTUP/.test(st)?'bad':/TERISI/.test(st)?'info':/CADANGAN/.test(st)?'warn':'ok';
+    const muat=us.length?'':(()=>{let n='-';zones.forEach(z=>{if(z.dur<=sisa+1e-9)n=z.n});return n})();
+    return `<tr><td><b>${sl}</b></td><td><span class="chip ${cls}">${st}</span></td><td>${us.length?us.map(u=>`<a class="lnk" data-act="open" data-ch="${esc(u.ch)}">${esc(u.cust)}</a>`).join('<br>'):'<span class="muted">-</span>'}</td><td class="mono">${us.length?hh(H)+' – '+hh(I):''}</td><td>${us.length?esc((zones.find(z=>z.dur===dur)||{}).n||''):(muat!=='-'?'<span class="muted">muat s/d '+muat+'</span>':'')}</td></tr>`;
+  }).join('');
+  const st=units.filter(u=>u.tglPlan===d&&u.slot===SC);tot+=st.length;
+  
+  $('#main').innerHTML=`${banner()}
+  <div class="bar"><div><h2>Jadwal Kirim</h2><div class="muted">Jam ${set.jamBuka}–${set.jamTutup}. Satu driver, ${set.maxSlot} slot per hari + 1 cadangan.</div></div></div>
+  <div class="bar">
+    <button class="btn ghost sm" data-act="day" data-n="-1">◀</button>
+    <input type="date" value="${d}" data-f="jd" style="font-weight:700">
+    <button class="btn ghost sm" data-act="day" data-n="1">▶</button>
+    <button class="btn ghost sm" data-act="day" data-n="0">Hari ini</button>
+    <b>${dayName(d)}, ${fmtD(d)}</b><span class="sp"></span>
+    <span class="chip info">${tot} unit</span>${bentrok?`<span class="chip bad">${bentrok} slot bentrok</span>`:''}
+  </div>
+  <div class="tw" style="max-height:none"><table><thead><tr><th>Slot</th><th>Status</th><th>Customer</th><th>Jam</th><th>Zona</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="grid two" style="margin-top:12px">
+    <div class="card"><h3>Serah terima di cabang</h3>${st.length?st.map(u=>`<div class="todo" data-act="open" data-ch="${esc(u.ch)}"><span><b>${esc(u.cust)}</b><div class="sub">${esc(unitName(u))}</div></span><span class="mono">${hh(u.jamB)||'isi jam'}</span></div>`).join(''):'<div class="muted">Tidak ada.</div>'}</div>
+
+  </div>`;
+},fill(){}};
+
+/* ================= ADMIN ================= */
+PG.admin={render(){
+  const s=S.set,dl=window.__dl;
+  $('#main').innerHTML=`${banner()}
+  <div class="bar"><div><h2>Admin</h2><div class="muted">Data: ${S.ar.length} baris AR · ${S.dos.length} baris DO · ${S.stock.length} unit stock · ${units.length} unit dipantau</div></div></div>
+  ${syncCard()}
+  <div class="grid two">
+    <div class="card"><h3>1 · Update report AR <span class="tag">ganti total</span></h3>
+      <textarea class="paste" id="pasteAR" placeholder="Copy report AR dari Excel (termasuk baris judul), lalu paste di sini."></textarea>
+      <div class="bar" style="margin:8px 0 0"><button class="btn" data-act="pasteAR">Simpan data AR</button></div></div>
+    <div class="card"><h3>2 · Update report DO <span class="tag">ditambahkan</span></h3>
+      <textarea class="paste" id="pasteDO" placeholder="Copy report DO dari Excel (termasuk baris judul), lalu paste di sini."></textarea>
+      <div class="bar" style="margin:8px 0 0"><button class="btn" data-act="pasteDO">Tambah data DO</button></div></div>
+    <div class="card"><h3>3 · Update All Stock <span class="tag">ganti total</span></h3>
+      <textarea class="paste" id="pasteStock" placeholder="Copy report ALL STOCK dari Excel (termasuk baris judul), lalu paste di sini. Menentukan posisi unit dan unit mana yang sudah delivery (sudah tidak ada di stock)."></textarea>
+      <div class="bar" style="margin:8px 0 0"><button class="btn" data-act="pasteStock">Simpan data stock</button></div></div>
+    <div class="card"><h3>Atau unggah file Excel</h3><div class="muted" style="margin-bottom:8px">Jenis report (AR / DO / All Stock) dikenali otomatis. Boleh pilih beberapa file sekaligus.</div><input type="file" id="file" accept=".xlsx,.xls,.csv" multiple></div>
+    <div class="card"><h3>Unduh &amp; backup</h3>
+      <div class="bar"><button class="btn" data-act="xlsx">Unduh Excel</button><button class="btn ghost" data-act="bak">Backup (.json)</button></div>
+      <div class="muted" style="margin:6px 0">Pulihkan dari backup:</div><input type="file" id="restore" accept=".json"></div>
+  </div>
+  <details class="card" style="margin-top:12px;${SYNC.on?'display:none':''}"><summary>Keamanan: ganti PIN</summary><div class="fg" style="margin-top:10px">
+    <label class="fld"><span>PIN Admin baru</span><input type="password" id="pa" inputmode="numeric" autocomplete="off"></label>
+    <label class="fld"><span>PIN Sales baru</span><input type="password" id="ps" inputmode="numeric" autocomplete="off"></label></div>
+    <div class="bar" style="margin-top:10px"><button class="btn" data-act="pins">Simpan PIN</button></div>
+    <div class="sub">Kosongkan kolom yang tidak ingin diganti.</div></details>
+  <details class="card" style="margin-top:12px"><summary>Pengaturan jadwal driver</summary><div class="grid two" style="margin-top:10px">
+    <div><div class="fg">
+      <label class="fld"><span>Jam buka</span><input type="time" data-s="jamBuka" value="${esc(s.jamBuka)}"></label>
+      <label class="fld"><span>Jam tutup (driver sudah kembali)</span><input type="time" data-s="jamTutup" value="${esc(s.jamTutup)}"></label>
+      <label class="fld"><span>Maks slot reguler / hari</span><input type="number" min="1" max="4" data-s="maxSlot" value="${esc(s.maxSlot)}"></label>
+      <label class="fld"><span>Durasi serah terima di cabang (jam)</span><input type="number" step="0.5" min="0.5" data-s="durZona0" value="${esc(s.durZona0)}"></label></div></div>
+    <div><div class="tw" style="max-height:none"><table><thead><tr><th>Zona</th><th>Km min</th><th>Km maks</th><th>Durasi (jam)</th></tr></thead><tbody>${s.zones.map((z,i)=>`<tr><td><b>${esc(z.n)}</b></td><td><input type="number" style="width:70px" data-z="${i}.min" value="${z.min}"></td><td><input type="number" style="width:70px" data-z="${i}.max" value="${z.max}"></td><td><input type="number" step="0.5" style="width:70px" data-z="${i}.dur" value="${z.dur}"></td></tr>`).join('')}</tbody></table></div></div>
+    <label class="fld"><span>Kode lokasi stock yang dianggap “Di Cabang” (satu per baris)</span><textarea style="min-height:80px" data-s="branchLoc">${esc((s.branchLoc||[]).join('\n'))}</textarea></label>
+    <label class="fld"><span>Leasing yang boleh kirim saat DP lunas (satu per baris)</span><textarea style="min-height:80px" data-s="leasingDP">${esc((s.leasingDP||[]).join('\n'))}</textarea></label></div></details>
+  <details class="card" style="margin-top:12px"><summary>Reset data</summary><div class="bar" style="margin-top:10px"><button class="btn ghost" data-act="sample">Muat data contoh</button><button class="btn red" data-act="clear">Kosongkan semua data</button></div><div class="sub">Lakukan backup dulu.</div></details>`;
+}};
+
+/* ================= DETAIL UNIT ================= */
+function openUnit(ch,prefill){
+  const u=UM.get(ch);if(!u)return;const m=Object.assign({},S.man[ch],prefill||{});
+  const lk=own=>!can(own);
+  const lab=(own,l)=>(lk(own)?'🔒 ':'')+l;
+  const inp=(k,l,own,t,x)=>`<label class="fld ${lk(own)?'lock':''}"><span>${lab(own,l)}</span><input type="${t||'text'}" name="${k}" value="${esc(m[k]==null?'':m[k])}" ${lk(own)?'disabled':''} ${x||''}></label>`;
+  const sel=(k,l,own,o)=>`<label class="fld ${lk(own)?'lock':''}"><span>${lab(own,l)}</span><select name="${k}" ${lk(own)?'disabled':''}><option value=""></option>${o.map(x=>`<option ${m[k]===x?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
+  const chk=(k,l,own)=>`<label class="chk ${lk(own)?'lock':''}"><input type="checkbox" name="${k}" ${m[k]?'checked':''} ${lk(own)?'disabled':''}> ${lab(own,l)}</label>`;
+  const tag=t=>`<span class="tag">${t}</span>`;
+  const M=$('#modal');
+  M.innerHTML=`<div class="sheet"><div class="sheet-h"><div><h2 style="margin:0">${esc(u.cust)}</h2><div class="sub">${esc(unitName(u))} · Sales: ${esc(u.sales)}</div><div class="sub mono">${esc(ch)}</div></div><button class="btn ghost sm" data-act="close">Tutup ✕</button></div>
+  <form id="uf"><div class="sheet-b">
+    <div class="next"><div style="margin-bottom:4px">${chip(u.stAR)} ${chip(u.stDel)}</div><b>Langkah berikutnya:</b> ${esc(nextStep(u))}</div>
+    ${konfCard(u)}
+    ${ROLE==='view'?'<div class="banner">Mode lihat saja. Klik “Masuk” di kanan atas untuk mengisi data.</div>':''}
+    <div class="info-grid"><div><span>Tagihan</span><b>${u.inAR?rp(u.outs):'Lunas'}</b></div><div><span>Jatuh tempo</span><b>${fmtD(u.due)||'-'}${u.od?' (OD '+u.aging+' hr)':''}</b></div><div><span>Pembayaran</span><b>${esc(u.jenis)} ${esc(u.leasing)}</b></div><div><span>Posisi unit</span><b>${esc(u.posisi)||'-'}</b></div>${u.inStock&&u.stockAge!==''?`<div><span>Umur stok</span><b>${u.stockAge} hari</b></div>`:''}</div>
+    <div class="sec"><h4>Pembayaran ${tag('Admin')}</h4><div class="fg">${sel('fullDP','Full DP / Full Payment','admin',L_BAYAR)}${inp('tglValid','Tgl valid leasing','admin','date')}${inp('planLunas','Plan pelunasan','admin','date')}</div></div>
+    <div class="sec"><h4>Kesiapan unit ${tag('Admin')}</h4><div class="fg">${inp('tglDR','Tgl unit sampai cabang (opsional)','admin','date')}${inp('tglQC','Tgl QC','admin','date')}${sel('hasilQC','Hasil QC','admin',L_QC)}${inp('ketDefect','Catatan defect','admin')}</div><div class="fg">${chk('cuci','Sudah cuci','admin')}${chk('decIn','DEC In','admin')}${chk('decOut','DEC Out','admin')}</div></div>
+    <div class="sec"><h4>STNK</h4><div class="fg">${sel('syarat','Syarat kirim','admin',L_SYARAT)}${inp('tglMohonSTNK','Tgl mohon STNK / KIR','admin','date')}<label class="fld ${lk('admin')?'lock':''}"><span>${lab('admin','Tgl STNK jadi')}</span><input type="date" name="tglSTNKJadi" value="${esc(m.tglSTNKJadi||'')}" ${lk('admin')?'disabled':''}>${u.stnkAR?`<small>Dari report AR: ${fmtD(u.stnkAR)} (dipakai bila kosong)</small>`:''}</label></div></div>
+    <div class="sec"><h4>Jadwal kirim</h4><div class="fg">${inp('tglPlan','Tanggal kirim','admin','date')}${sel('slot','Slot','admin',SLOTS)}${inp('jarak','Jarak (km)','admin','number','step="0.1" min="0"')}${inp('jamSerah','Jam serah terima (khusus di cabang)','admin','time')}</div>
+      <div class="fg" style="margin-top:10px">${inp('alamat','Alamat kirim','admin')}${sel('konfirmasi','Konfirmasi sales','admin',L_KONF)}${inp('reschedule','Tgl usulan reschedule','admin','date')}</div>
+      <div class="sub">Semua kolom di bagian ini diisi ${tag('Admin')}. Sales memakai tombol Konfirmasi di atas.${u.cek?' · Cek jadwal: <b>'+esc(u.cek)+'</b>':''}</div></div>
+    <div class="sec"><h4>Setelah kirim ${tag('Admin')}</h4><div class="fg">${inp('bstkCetak','Tgl BSTK cetak','admin','date')}${inp('bstkKembali','Tgl BSTK kembali (terisi = sudah delivery)','admin','date')}${inp('ketDelivery','Keterangan','admin')}</div></div>
+  </div><div class="sheet-f"><button type="button" class="btn ghost" data-act="close">${ROLE==='view'?'Tutup':'Batal'}</button>${ROLE==='view'?'':'<button type="submit" class="btn">Simpan</button>'}</div></form></div>`;
+  M.hidden=false;
+  $('#uf').onsubmit=e=>{e.preventDefault();
+    const next=Object.assign({},S.man[ch]);
+    $('#uf').querySelectorAll('[name]:not(:disabled)').forEach(el=>{let v=el.type==='checkbox'?el.checked:el.value;if(v===''||v===false){delete next[el.name];return}if(el.name==='jarak')v=Number(v);next[el.name]=v});
+    const o0=S.man[ch]||{};if((next.konfirmasi||'')!==(o0.konfirmasi||'')||(next.reschedule||'')!==(o0.reschedule||''))next.konfAt=Date.now();
+    if(Object.keys(next).length)S.man[ch]=next;else delete S.man[ch];
+    persist();closeModal();refresh();toast('Tersimpan');};
+}
+function closeModal(){const M=$('#modal');M.hidden=true;M.innerHTML=''}
+
+
+/* ================= IMPOR ================= */
+const AR_COLS={sales:['salesman name'],custNo:['customer'],cust:['customer name'],grp:['grp.desc.'],chassis:['chassis no.','chassis no'],funcLoc:['func.loc'],gi:['gi date'],stnk:['stnk date'],billing:['billing no'],kjual:['kjual'],leasing:['leasing name'],approve:['approve date adh e-invoice'],age:['age'],posting:['posting dt'],due:['due date'],amount:['billing amount'],outs:['outstd. balance']};
+const DO_COLS={noFaktur:['no. faktur'],tglFaktur:['tgl.faktur'],sales:['salesman name'],spv:['spv name'],custNo:['cust. no'],cust:['nama customer'],tipe:['tipe kendaraan'],chassis:['chasis','chassis'],warna:['color description'],leasing:['leasing']};
+const AR_POS=['sales','custNo','cust','grp','chassis','funcLoc','gi','stnk','billing','kjual','leasing','approve','age','posting','due','amount','outs'];
+const DO_POS={noFaktur:2,tglFaktur:3,sales:6,spv:7,custNo:8,cust:9,tipe:10,chassis:11,warna:13,leasing:15};
+function pDate(v){
+  if(v==null||v==='')return '';
+  if(v instanceof Date){if(isNaN(v))return '';const d=new Date(v.getTime()+43200000);return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+  if(typeof v==='number'){if(v>20000&&v<80000){const d=new Date(Math.round((v-25569)*86400000)+43200000);return d.getUTCFullYear()+'-'+p2(d.getUTCMonth()+1)+'-'+p2(d.getUTCDate())}return ''}
+  const s=String(v).trim();let m;
+  if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)))return m[1]+'-'+p2(m[2])+'-'+p2(m[3]);
+  if((m=s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})/)))return m[3]+'-'+p2(m[2])+'-'+p2(m[1]);
+  return '';
+}
+function pNum(v){
+  if(typeof v==='number')return v;if(v==null)return 0;
+  let s=String(v).trim().replace(/\s/g,'').replace(/^Rp/i,'');if(s==='')return 0;
+  if(/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s))s=s.replace(/\./g,'').replace(',','.');
+  else if(/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s))s=s.replace(/,/g,'');
+  else s=s.replace(',','.');
+  if(/-$/.test(s))s='-'+s.slice(0,-1);
+  const n=Number(s);return isNaN(n)?0:n;
+}
+const isCh=v=>/^[A-Z0-9]{15,18}$/.test(String(v||'').trim().toUpperCase());
+function detect(rows){
+  for(let i=0;i<Math.min(4,rows.length);i++){
+    const h=(rows[i]||[]).map(c=>String(c==null?'':c).trim().toLowerCase());
+    if(h.includes('equipment')&&h.includes('functional location'))return {type:'stock',hi:i,h};
+    if(h.includes('chassis no.')||h.includes('chassis no'))return {type:'ar',hi:i,h};
+    if(h.includes('chasis'))return {type:'do',hi:i,h};
+  }
+  const r=rows[0]||[];
+  if(isCh(r[4])&&!isCh(r[11]))return {type:'ar',hi:-1};
+  if(isCh(r[11]))return {type:'do',hi:-1};
+  return null;
+}
+function ingest(rows,force){
+  const det=detect(rows);if(!det)return {err:'Judul kolom tidak dikenali. Pastikan baris judul ikut ter-copy.'};
+  if(force&&det.type!==force)return {err:'Data yang di-paste terlihat seperti report '+det.type.toUpperCase()+', bukan '+force.toUpperCase()+'.'};
+  const out=[];const data=rows.slice(det.hi+1);
+  if(det.type==='stock'){
+    const SK={ch:['equipment'],plant:['plant'],material:['material'],matDesc:['material description'],color:['color'],colorDesc:['color description'],engine:['engine'],loc:['functional location'],locDesc:['functlocdescrip.'],age:['age'],rrn:['rrn number']};
+    const idx={};for(const k in SK)idx[k]=det.h.findIndex(x=>SK[k].includes(x));
+    data.forEach(r=>{const g=k=>idx[k]>=0?r[idx[k]]:'';const ch=String(g('ch')||'').trim().toUpperCase();if(!isCh(ch))return;
+      const ag=g('age');out.push({ch,plant:String(g('plant')||'').trim(),material:String(g('material')||'').trim(),matDesc:String(g('matDesc')||'').trim(),color:String(g('color')||'').trim(),colorDesc:String(g('colorDesc')||'').trim(),engine:String(g('engine')||'').trim(),loc:String(g('loc')||'').trim(),locDesc:String(g('locDesc')||'').trim(),age:(ag===''||ag==null)?'':pNum(ag),rrn:String(g('rrn')||'').trim()})});
+    return {type:'stock',items:out};
+  }
+  if(det.type==='ar'){
+    let idx={};
+    if(det.hi>=0){for(const k in AR_COLS){idx[k]=det.h.findIndex(x=>AR_COLS[k].includes(x))}}
+    else AR_POS.forEach((k,i)=>idx[k]=i);
+    data.forEach(r=>{const g=k=>idx[k]>=0?r[idx[k]]:'';const ch=String(g('chassis')||'').trim();if(!isCh(ch))return;
+      out.push({sales:String(g('sales')||'').trim(),custNo:String(g('custNo')||'').trim(),cust:String(g('cust')||'').trim(),grp:String(g('grp')||'').trim(),chassis:ch,funcLoc:String(g('funcLoc')||'').trim(),gi:pDate(g('gi')),stnk:pDate(g('stnk')),billing:String(g('billing')||'').trim(),kjual:String(g('kjual')||'').trim(),leasing:String(g('leasing')||'').trim(),approve:pDate(g('approve')),age:pNum(g('age')),posting:pDate(g('posting')),due:pDate(g('due')),amount:pNum(g('amount')),outs:pNum(g('outs'))})});
+  }else{
+    let idx={};
+    if(det.hi>=0){for(const k in DO_COLS){idx[k]=det.h.findIndex(x=>DO_COLS[k].includes(x))}}
+    else idx=Object.assign({},DO_POS);
+    data.forEach(r=>{const g=k=>idx[k]>=0?r[idx[k]]:'';const ch=String(g('chassis')||'').trim();if(!isCh(ch))return;
+      out.push({noFaktur:String(g('noFaktur')||'').trim(),tglFaktur:pDate(g('tglFaktur')),sales:String(g('sales')||'').trim(),spv:String(g('spv')||'').trim(),custNo:String(g('custNo')||'').trim(),cust:String(g('cust')||'').trim(),tipe:String(g('tipe')||'').trim(),chassis:ch,warna:String(g('warna')||'').trim(),leasing:String(g('leasing')||'').trim()})});
+  }
+  return {type:det.type,items:out};
+}
+function nowStr(){const d=new Date();return fmtD(todayISO())+' '+p2(d.getHours())+':'+p2(d.getMinutes())}
+function applyIngest(res){
+  if(res.err){toast(res.err);return false}
+  if(!res.items.length){toast('Tidak ada baris unit yang terbaca.');return false}
+  if(res.type==='stock'){S.stock=res.items;S.meta.stockAt=nowStr()}
+  else if(res.type==='ar'){S.ar=res.items;S.meta.arAt=nowStr()}
+  else{const mp=new Map(S.dos.map(d=>[d.chassis,d]));res.items.forEach(d=>mp.set(d.chassis,d));S.dos=[...mp.values()];S.meta.doAt=nowStr()}
+  S.meta.sample=false;persist();refresh();
+  toast(({ar:'Data AR diganti: ',do:'Data DO ditambahkan: ',stock:'Data All Stock diganti: '})[res.type]+res.items.length+' unit');return true;
+}
+function parseTSV(t){return t.replace(/\r/g,'').split('\n').filter(l=>l.trim()!=='').map(l=>l.split('\t'))}
+function readFile(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsArrayBuffer(file)})}
+async function handleFiles(files){
+  if(typeof XLSX==='undefined'){toast('Pustaka Excel belum termuat. Coba muat ulang halaman.');return}
+  let n=0;
+  for(const f of files){
+    try{
+      const buf=await readFile(f);const wb=XLSX.read(buf,{type:'array',cellDates:true});
+      for(const name of wb.SheetNames){
+        const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:''});
+        const det=detect(rows.slice(0,6));if(!det||det.hi<0)continue;
+        if(applyIngest(ingest(rows)))n++;
+      }
+    }catch(e){toast('Gagal membaca '+f.name)}
+  }
+  if(!n)toast('Tidak ada sheet AR / DO yang dikenali di file tersebut.');
+}
+
+/* ================= EKSPOR ================= */
+const toD=iso=>{if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso))return iso||'';const [y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d)};
+async function xlsxExport(){
+  const dl=window.__dl;if(!dl||typeof XLSX==='undefined')return;
+  const wb=XLSX.utils.book_new();const per=Object.keys(S.fb).sort();
+  const ar=units.filter(u=>u.inAR).sort((a,b)=>b.aging-a.aging).map((u,i)=>{const o={'No':i+1,'Customer No':u.custNo,'Nama Customer':u.cust,'Nama Sales':u.sales,'Grup Customer':u.grp,'Jenis Bayar':u.jenis,'Leasing':u.leasing,'Posting Date':toD(u.posting),'Due Date':toD(u.due),'Billing Amount (Rp)':u.amount,'Outstanding (Rp)':u.outs,'Aging (hari)':u.aging,'Bucket Aging':u.bucket,'OD / Not OD':u.od?'OD':'Not OD','Full DP/Full Payment':u.fullDP,'Posisi Unit':u.posisi,'Umur Stock (hari)':u.stockAge,'Tgl GI':toD(u.gi),'Approve ADH E-Invoice':toD(u.approve),'Tgl Valid Leasing':toD(u.m.tglValid),'Plan Pelunasan':toD(u.m.planLunas),'Status AR':u.stAR,'Feedback AR':u.fb};per.forEach(p=>{o['Feedback '+fmtD(p)]=S.fb[p][u.ch]||''});return o});
+  const dv=units.map((u,i)=>({'No':i+1,'No Rangka':u.ch,'Nama Sales':u.sales,'Nama Customer':u.cust,'Jenis Bayar':u.jenis,'Leasing':u.leasing,'Outstanding (Rp)':u.outs,'Status AR':u.stAR,'Posisi Unit':u.posisi,'Umur Stock (hari)':u.stockAge,'Tgl DR Unit':toD(u.m.tglDR),'Plan Unit Sampai Cabang':toD(u.m.planSampai),'Tgl QC':toD(u.m.tglQC),'DEC In':u.m.decIn?'Ya':'','DEC Out':u.m.decOut?'Ya':'','Cuci':u.m.cuci?'Sudah':'Belum','Hasil QC':u.m.hasilQC||'','Boleh Kirim?':u.boleh,'Keterangan (defect)':u.m.ketDefect||'','Syarat STNK':u.syarat,'Tgl Mohon STNK/KIR':toD(u.m.tglMohonSTNK),'Tgl STNK Jadi':toD(u.tglSTNKJadi),'Status STNK':u.stStnk,'Tgl Plan Delivery':toD(u.tglPlan),'Slot':u.slot,'Jarak (km)':u.jarak,'Zona':u.zona,'Durasi (jam)':u.dur,'Jam Berangkat':hh(u.jamB),'Jam Kembali':hh(u.jamK),'Alamat Kirim':u.m.alamat||'','Konfirmasi':u.m.konfirmasi||'','Tgl Reschedule':toD(u.m.reschedule),'Cek Jadwal':u.cek,'Tgl BSTK Cetak':toD(u.m.bstkCetak),'Tgl BSTK Kembali / GI':toD(u.m.bstkKembali),'Status Delivery':u.stDel,'Keterangan':u.m.ketDelivery||''}));
+  const jd=units.filter(u=>u.tglPlan&&!u.done).sort((a,b)=>a.tglPlan.localeCompare(b.tglPlan)||SLOTS.indexOf(a.slot)-SLOTS.indexOf(b.slot)).map(u=>({'Tanggal':toD(u.tglPlan),'Slot':u.slot,'Customer':u.cust,'No Rangka':u.ch,'Zona':u.zona,'Jam Berangkat':hh(u.jamB),'Jam Kembali':hh(u.jamK),'Alamat':u.m.alamat||'','Status Delivery':u.stDel,'Cek Jadwal':u.cek}));
+  const add=(rows,name)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{}],{cellDates:true,dateNF:'dd-mmm-yy'}),name);
+  add(ar,'Monitoring AR');add(dv,'Delivery Unit');add(jd,'Jadwal Delivery');
+  const buf=XLSX.write(wb,{type:'array',bookType:'xlsx',cellDates:true});
+  try{await dl.save({filename:'Monitoring_Unit_BSDC_'+todayISO()+'.xlsx',data:buf});toast('File Excel siap')}catch(e){if(e&&e.code!=='declined')toast('Gagal mengunduh')}
+}
+async function jsonBackup(){const dl=window.__dl;if(!dl)return;try{await dl.save({filename:'backup_unittrack_'+todayISO()+'.json',data:JSON.stringify(S)});toast('Backup siap')}catch(e){if(e&&e.code!=='declined')toast('Gagal mengunduh')}}
+
+
+/* ================= EVENT ================= */
+function setPath(path,val){const [a,b]=path.split('.');if(b)UI[a][b]=val;else UI[a]=val}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-act]');
+  if(!t){if(e.target===$('#modal'))closeModal();return}
+  const a=t.dataset.act;
+  if(a==='tab')go(t.dataset.tab);
+  else if(a==='login')openLogin();
+  else if(a==='logout'){setRole('view');UI.h.sales='';UI.u.sales='';closeModal();afterRole();toast('Keluar. Mode lihat saja')}
+  else if(a==='unitview'){UI.u.view=t.dataset.v;UI.u.q='';UI.u.sales='';go('unit')}
+  else if(a==='konfr'){const w=$('#rsw');if(w)w.hidden=false}
+  else if(a==='konf'){setKonf(t.dataset.ch,'On Scheduled','')}
+  else if(a==='konfsave'){const d=$('#rsd').value;if(!d)return toast('Pilih tanggal usulan dulu');if(d<todayISO())return toast('Tanggal tidak boleh sudah lewat');setKonf(t.dataset.ch,'Rescheduled',d)}
+  else if(a==='hsales'){UI.h.sales=t.dataset.s==='(tanpa sales)'?'':t.dataset.s;PG.home.render()}
+  else if(a==='dashx')dashExport();
+  else if(a==='fsx')fsExport();
+  else if(a==='sloc'){UI.s.loc=t.dataset.v;PG.stok.render()}
+  else if(a==='pill'){UI.u.view=t.dataset.v;PG.unit.render()}
+  else if(a==='open')openUnit(t.dataset.ch);
+  else if(a==='close')closeModal();
+  else if(a==='jadwal'){UI.jd=t.dataset.date;go('jd')}
+  else if(a==='day'){const n=+t.dataset.n;UI.jd=n===0?todayISO():addDays(UI.jd,n);PG.jd.render()}
+  else if(a==='plan'){if(can('admin'))openUnit(t.dataset.ch,{tglPlan:UI.jd})}
+  else if(!can('admin'))return;
+  else if(a==='synccon')syncConnect();
+  else if(a==='syncpush')syncPush();
+  else if(a==='syncpull')syncPull();
+  else if(a==='synclink')syncLink();
+  else if(a==='syncoff')syncOff();
+  else if(a==='pasteAR'){const v=$('#pasteAR').value;if(!v.trim())return toast('Kotak masih kosong');if(S.ar.length&&!confirm('Data AR lama akan diganti total. Lanjutkan?'))return;applyIngest(ingest(parseTSV(v),'ar'))}
+  else if(a==='pasteDO'){const v=$('#pasteDO').value;if(!v.trim())return toast('Kotak masih kosong');applyIngest(ingest(parseTSV(v),'do'))}
+  else if(a==='pasteStock'){const v=$('#pasteStock').value;if(!v.trim())return toast('Kotak masih kosong');if(S.stock.length&&!confirm('Data stock lama akan diganti total. Lanjutkan?'))return;applyIngest(ingest(parseTSV(v),'stock'))}
+  else if(a==='xlsx')xlsxExport();
+  else if(a==='bak')jsonBackup();
+  else if(a==='pins'){const pa=$('#pa').value.trim(),ps=$('#ps').value.trim();if(!pa&&!ps)return toast('Isi PIN baru dulu');
+    if((pa&&pa.length<4)||(ps&&ps.length<4))return toast('PIN minimal 4 angka');
+    if(pa)S.set.pins.admin=hashPin(pa);if(ps)S.set.pins.sales=hashPin(ps);persist();PG.admin.render();toast('PIN disimpan')}
+  else if(a==='sample'){if(confirm('Semua data & isian saat ini diganti data contoh. Lanjutkan?')){const p=S.set.pins;S=freshState();S.set.pins=p;persist();refresh();toast('Data contoh dimuat')}}
+  else if(a==='clear'){if(confirm('Semua data AR, DO, dan isian manual akan dihapus. Lanjutkan?')){const p=S.set.pins;S=emptyState();S.set.pins=p;persist();refresh();toast('Semua data dikosongkan')}}
+});
+document.addEventListener('input',e=>{const t=e.target;if(t.dataset&&t.dataset.f==='u.q'){UI.u.q=t.value;PG.unit.fill()}else if(t.dataset&&t.dataset.f==='h.q'){UI.h.q=t.value;PG.home.fill()}else if(t.dataset&&t.dataset.f==='s.q'){UI.s.q=t.value;PG.stok.fill()}});
+document.addEventListener('change',async e=>{
+  const t=e.target,d=t.dataset||{};
+  if(d.f==='u.sales'){UI.u.sales=t.value;PG.unit.fill()}
+  else if(d.f==='h.sales'){UI.h.sales=t.value;PG.home.render()}
+  else if(d.f==='jd'){if(t.value){UI.jd=t.value;PG.jd.render()}}
+  else if(!can('admin'))return;
+  else if(d.s){
+    if(d.s==='leasingDP'||d.s==='branchLoc')S.set[d.s]=t.value.split('\n').map(x=>x.trim()).filter(Boolean);
+    else if(d.s==='jamBuka'||d.s==='jamTutup')S.set[d.s]=t.value||S.set[d.s];
+    else S.set[d.s]=Number(t.value)||S.set[d.s];
+    persist();compute();toast('Pengaturan disimpan')}
+  else if(d.z){const [i,k]=d.z.split('.');S.set.zones[+i][k]=Number(t.value);persist();compute();toast('Zona disimpan')}
+  else if(t.id==='file'&&t.files.length){await handleFiles([...t.files]);t.value=''}
+  else if(t.id==='restore'&&t.files.length){try{const o=JSON.parse(await t.files[0].text());if(o&&o.ar&&o.dos&&o.set){S=o;fixState();persist();refresh();toast('Backup dipulihkan')}else toast('File backup tidak valid')}catch(x){toast('File backup tidak valid')}t.value=''}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#modal').hidden)closeModal()});
+
+function fixState(){if(!S.meta)S.meta={};if(!S.stock)S.stock=[];if(!S.set.pins)S.set.pins=defPins();if(!S.set.branchLoc)S.set.branchLoc=['T066','T050']}
+/* ================= START ================= */
+S=loadState()||emptyState();
+fixState();
+compute();renderNav();PG.home.render();
+SYNC.on=!!SYNC.url&&!window.claude;
+if(SYNC.on){if(ROLE!=='view'&&!PIN)setRole('view');renderNav();pullState().then(()=>startPoll()).catch(()=>{badge('Offline');startPoll()})}
+window.__dl=undefined;
+(async()=>{try{
+  if(window.claude&&window.claude.use){window.__dl=await window.claude.use('downloads')}
+  else{window.__dl={save:async({filename,data})=>{const b=data instanceof Blob?data:new Blob([data]);const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);return {status:'saved'}}}}
+}catch(e){window.__dl=null}})();
+
+</script>
+</body>
+</html>

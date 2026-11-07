@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>UnitTrack – Monitoring AR & Delivery Unit</title>
+<title>UNIT HUB – Integrated Unit Delivery & Receivable Management</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -145,12 +145,13 @@ details.card summary{cursor:pointer;font-weight:700}
 .zb small{display:block;font-size:10.5px;color:var(--mute)}
 .zb.sel{background:var(--brand-soft);border-color:var(--brand);outline:2px solid var(--brand)}
 .zb.far{border-style:dashed}
+.ln{min-height:28px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 </style>
 </head>
 <body>
 <header class="top">
   <div class="top-in">
-    <div class="brand"><i>🚗</i><div>UnitTrack<small>Monitoring AR &amp; Delivery Unit · Auto2000 BSD City</small></div></div>
+    <div class="brand"><i>🚗</i><div>UNIT HUB<small>Integrated Unit Delivery &amp; Receivable Management</small></div></div>
     <div class="today" id="today"></div><button class="rolebtn" id="role" data-act="login"></button>
     <nav id="nav"></nav>
   </div>
@@ -349,7 +350,7 @@ function compute(){
 
 
 /* ================= SINKRONISASI GOOGLE SHEET ================= */
-const SYNC_URL='https://script.google.com/macros/s/AKfycbxKJZW1L2KXAIJqJUiDSbou1H52OuIVujuDyf-VqDky/dev';
+const SYNC_URL='';
 const SYNC={url:'',code:'',ver:0,av:0,on:false,pending:false,status:'',dp:false};
 (function(){try{
   const q=new URLSearchParams(location.search).get('s');
@@ -803,6 +804,12 @@ async function fsExport(){
 }
 
 /* ================= JADWAL ================= */
+function konfChip(u){
+  const m=u.m;
+  if(m.konfirmasi==='On Scheduled')return cp('On Schedule','ok');
+  if(m.konfirmasi==='Rescheduled')return cp('Reschedule','warn')+(m.rsDari?` <span class="sub">dari ${esc(rsDariTxt(m.rsDari))}</span>`:'');
+  return cp('Belum ada konfirmasi sales','warn');
+}
 PG.jd={render(){
   const d=UI.jd,set=S.set,jb=toH(set.jamBuka),jt=toH(set.jamTutup),zones=[...set.zones].sort((a,b)=>a.dur-b.dur);
   let prevEnd=jb,tot=0,bentrok=0;
@@ -816,7 +823,7 @@ PG.jd={render(){
     else st=sl==='Cadangan'?'CADANGAN (urgent)':sisa<Math.min(...zones.map(z=>z.dur))?'TUTUP':'KOSONG';
     const cls=/BENTROK|LEWAT|TUTUP/.test(st)?'bad':/TERISI/.test(st)?'info':/CADANGAN/.test(st)?'warn':'ok';
     const muat=us.length?'':(()=>{let n='-';zones.forEach(z=>{if(z.dur<=sisa+1e-9)n=z.n});return n})();
-    return `<tr><td><b>${sl}</b></td><td><span class="chip ${cls}">${st}</span></td><td>${us.length?us.map(u=>`<a class="lnk" data-act="open" data-ch="${esc(u.ch)}">${esc(u.cust)}</a>`).join('<br>'):'<span class="muted">-</span>'}</td><td class="mono">${us.length?hh(H)+' – '+hh(I):''}</td><td>${us.length?esc((zones.find(z=>z.dur===dur)||{}).n||''):(muat!=='-'?'<span class="muted">muat s/d '+muat+'</span>':'')}</td></tr>`;
+    return `<tr><td><b>${sl}</b></td><td><span class="chip ${cls}">${st}</span></td><td>${us.length?us.map(u=>`<div class="ln"><a class="lnk" data-act="open" data-ch="${esc(u.ch)}">${esc(u.cust)}</a></div>`).join(''):'<span class="muted">-</span>'}</td><td class="mono">${us.length?hh(H)+' – '+hh(I):''}</td><td>${us.length?esc((zones.find(z=>z.dur===dur)||{}).n||''):(muat!=='-'?'<span class="muted">muat s/d '+muat+'</span>':'')}</td><td>${us.length?us.map(u=>`<div class="ln">${konfChip(u)}</div>`).join(''):'<span class="muted">-</span>'}</td></tr>`;
   }).join('');
   const st=units.filter(u=>u.tglPlan===d&&u.slot===SC);tot+=st.length;
   
@@ -830,9 +837,9 @@ PG.jd={render(){
     <b>${dayName(d)}, ${fmtD(d)}</b><span class="sp"></span>
     <span class="chip info">${tot} unit</span>${bentrok?`<span class="chip bad">${bentrok} slot bentrok</span>`:''}
   </div>
-  <div class="tw" style="max-height:none"><table><thead><tr><th>Slot</th><th>Status</th><th>Customer</th><th>Jam</th><th>Zona</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="tw" style="max-height:none"><table><thead><tr><th>Slot</th><th>Status</th><th>Customer</th><th>Jam</th><th>Zona</th><th>Konfirmasi sales</th></tr></thead><tbody>${rows}</tbody></table></div>
   <div class="grid two" style="margin-top:12px">
-    <div class="card"><h3>Serah terima di cabang</h3>${st.length?st.map(u=>`<div class="todo" data-act="open" data-ch="${esc(u.ch)}"><span><b>${esc(u.cust)}</b><div class="sub">${esc(unitName(u))}</div></span><span class="mono">${hh(u.jamB)||'isi jam'}</span></div>`).join(''):'<div class="muted">Tidak ada.</div>'}</div>
+    <div class="card"><h3>Serah terima di cabang</h3>${st.length?st.map(u=>`<div class="todo" data-act="open" data-ch="${esc(u.ch)}"><span><b>${esc(u.cust)}</b><div class="sub">${esc(unitName(u))}</div></span><span style="display:flex;gap:10px;align-items:center">${konfChip(u)}<span class="mono">${hh(u.jamB)||'isi jam'}</span></span></div>`).join(''):'<div class="muted">Tidak ada.</div>'}</div>
 
   </div>`;
 },fill(){}};
